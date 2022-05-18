@@ -1,0 +1,11 @@
+{
+    "python.autoComplete.extraPaths": [
+      "./runtime/__pypackages__/3.8/lib",
+      "./runtime/__pypackages__/3.9/lib"
+    ],
+    "python.analysis.extraPaths": [
+      "./runtime/__pypackages__/3.8/lib",
+      "./runtime/__pypackages__/3.9/lib"
+    ],
+    "python.analysis.stubPath": "./runtime/typings"
+}
