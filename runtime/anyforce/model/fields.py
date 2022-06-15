@@ -128,7 +128,7 @@ class CurrencyField(fields.Field, float):
     ) -> Optional[int]:
         if value is None:
             return None
-        return int(value * self.multiply)
+        return round(value * self.multiply)
 
 
 def ForeignKeyField(
