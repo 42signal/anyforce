@@ -84,6 +84,9 @@ class SplitCharField(fields.CharField, List[str]):
             (self.separator or "\n").join(value) if value else "", instance
         )
 
+    def __bool__(self):
+        return True
+
 
 class CurrencyField(fields.Field, float):
 
