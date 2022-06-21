@@ -9,24 +9,24 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          python-version: "3.8"
-      - uses: actions/cache@v2
+          python-version: "3.9"
+      - uses: actions/cache@v3
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip
-      - uses: actions/cache@v2
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - uses: actions/cache@v3
         with:
           path: ~/.cache/pdm
           key: ${{ runner.os }}-pdm-${{ hashFiles('**/pdm.lock') }}
-      - uses: actions/setup-node@v2
+          restore-keys: |
+            ${{ runner.os }}-pdm-
+      - uses: actions/setup-node@v3
         with:
           node-version: "16"
-      - uses: actions/cache@v2
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-npm16
       - run: npm ci
       - run: PYPI_API_TOKEN=${{ secrets.PYPI_API_TOKEN }} npm run publish
