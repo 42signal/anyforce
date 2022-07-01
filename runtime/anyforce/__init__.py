@@ -11,13 +11,21 @@ from .api.exceptions import register
 
 def create_app(
     secret_key: str,
-    https_only: bool,
     allow_origins: List[str],
     tortoise_config: Dict[str, Any],
+    max_age: int = 14 * 24 * 60 * 60,
+    same_site: str = "lax",
+    https_only: bool = True,
 ):
     app = FastAPI()
     app.add_middleware(RawContextMiddleware)
-    app.add_middleware(SessionMiddleware, secret_key=secret_key, https_only=https_only)
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=secret_key,
+        max_age=max_age,
+        https_only=https_only,
+        same_site=same_site,
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allow_origins,
