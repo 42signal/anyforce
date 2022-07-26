@@ -1,13 +1,13 @@
-from typing import Any
+from typing import Any, Hashable
 
 from starlette_context import context
 
 
-def get(k: str) -> Any:
+def get(k: Hashable) -> Any:
     return context.data.get(k)  # type: ignore
 
 
-def set(k: str, v: Any):
+def set(k: Hashable, v: Any):
     context.data[k] = v  # type: ignore
 
 
