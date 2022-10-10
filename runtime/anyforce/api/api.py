@@ -411,6 +411,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     r = cast(List[Dict[str, int]], await total_q)
                     total = r[0]["total"] if r else 0
                 else:
+                    q = q.distinct()
                     total = await q.count()
 
                 if order_by:
