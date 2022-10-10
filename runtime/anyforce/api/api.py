@@ -23,8 +23,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import create_model
 from pypika.terms import Term
 from tortoise.expressions import RawSQL
-from tortoise.fields.relational import ForeignKeyFieldInstance, RelationalField
-from tortoise.functions import Function, Max
+from tortoise.functions import Function
 from tortoise.models import Field, MetaInfo
 from tortoise.queryset import Q, QuerySet
 from tortoise.transactions import in_transaction
@@ -88,29 +87,32 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     ) -> Any:
         return v
 
-    def group_by_f(self, group_by: str, field: Field) -> Union[Function, Term]:
-        return Max(group_by)
+    def group_by_f(
+        self, group_by: str, field: Field
+    ) -> Optional[Union[Function, Term]]:
+        return None
 
     def group_by(
-        self, user: UserModel, model: Type[Model], group_by: List[str]
-    ) -> QuerySet[Model]:
-        if group_by:
-            model_meta: MetaInfo = getattr(model, "_meta")
-            field_names: Iterable[str] = model_meta.fields_map.keys()
-            annotates: Dict[str, Union[Function, Term]] = {}
-            for field_name in field_names:
-                if field_name in group_by:
-                    continue
-                field = model_meta.fields_map[field_name]
-                if isinstance(field, ForeignKeyFieldInstance):
-                    field_name = f"${field_name}_id"
-                elif isinstance(field, RelationalField):
-                    continue
-                annotates[field_name] = self.group_by_f(field_name, field)
-            q = model.annotate(**annotates)
-            q = q.group_by(*group_by)
-            return q
-        return model.all()
+        self,
+        user: UserModel,
+        q: QuerySet[Model],
+        include: Iterable[str],
+        group_by: List[str],
+    ):
+        model_meta: MetaInfo = getattr(q.model, "_meta")
+        field_names: Iterable[str] = include or model_meta.fields_map.keys()
+        annotates: Dict[str, Union[Function, Term]] = {}
+        for field_name in field_names:
+            if field_name in group_by:
+                continue
+            field = model_meta.fields_map[field_name]
+            annotate = self.group_by_f(field_name, field)
+            if annotate is None:
+                continue
+            annotates[field_name] = annotate
+        q = q.annotate(**annotates)
+        q = q.group_by(*group_by)
+        return annotates, q
 
     def q(
         self,
@@ -387,7 +389,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 group_by: List[str] = self.group_by_query(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
-                q = self.group_by(current_user, self.model, group_by)
+                q = self.model.all()
                 q = self.q(current_user, request, q, ResourceMethod.list)
 
                 # 通用过滤方案
@@ -400,7 +402,6 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 if include:
                     q = q.only(*include)
 
-                q = q.distinct()
                 if group_by:
                     group_by_fields = ",".join([f"`{field}`" for field in group_by])
                     total_q = q.annotate(
@@ -422,7 +423,11 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
                 q = q.offset(offset).limit(limit)
                 if group_by:
-                    dicts = cast(List[Dict[str, Any]], await q.values())
+                    annotates, q = self.group_by(current_user, q, include, group_by)
+                    dicts = cast(
+                        List[Dict[str, Any]],
+                        await q.values(*group_by, *annotates.keys()),
+                    )
                     objs = [self.model(**v) for v in dicts]
                 else:
                     objs = await q

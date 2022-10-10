@@ -2,7 +2,7 @@
     "name": "runtime",
     "private": true,
     "scripts": {
-        "prepare": "pip install pdm==1.13.3 && pdm install",
+        "prepare": "pip install pdm==2.1.2 && pdm install",
         "lint": "concurrently npm:lint-flake8 npm:lint-pyright",
         "lint-flake8": "pdm run python -m flake8",
         "lint-pyright": "pdm run pyright -p .",

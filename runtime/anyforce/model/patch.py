@@ -85,6 +85,7 @@ def patch_pydantic(
                             config=config,
                         )
 
+        field.allow_none = True
         model_fields[k] = field
         if required_override is not None:
             field.required = required_override
@@ -95,7 +96,6 @@ def patch_pydantic(
         if not field.required:
             continue
 
-        field.allow_none = True
         try:
             field.required = not issubclass(field.type_, PydanticModel)
         except TypeError:
