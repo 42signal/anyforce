@@ -1,17 +1,25 @@
 from datetime import datetime
+from decimal import Decimal
 
 try:
     from ciso8601 import parse_datetime  # type: ignore
 except ImportError:
     from dateutil.parser import parse as parse_datetime
+
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import orjson
 from fastapi.encoders import jsonable_encoder
 
 
+def fast_dumps_default(obj: Any) -> Any:
+    if isinstance(obj, Decimal):
+        return str(obj)
+    raise TypeError
+
+
 def fast_dumps(o: Any) -> str:
-    return orjson.dumps(o).decode("utf-8")
+    return orjson.dumps(o, default=fast_dumps_default).decode("utf-8")
 
 
 def raw_dumps(o: Any) -> bytes:
