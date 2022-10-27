@@ -11,6 +11,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Tuple,
     Type,
     TypeVar,
     Union,
@@ -213,36 +214,47 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     def translate_kv_condition(
         self, user: UserModel, request: Request, q: QuerySet[Model], kv: Dict[str, Any]
     ):
-        join_infos = {
-            ".and": "AND",
-            ".or": "OR",
-            ".not": "NOT",
-            ".not_or": "NOT_OR",
+        join_infos: Dict[str, Tuple[str, bool]] = {
+            ".and": (Q.AND, False),
+            ".or": (Q.OR, False),
+            ".not": (Q.AND, True),
+            ".not_or": (Q.OR, True),
         }
 
-        reverse = False
-        join_type = kv.pop(".logic", "AND").upper()
-        if join_type == "NOT":
-            reverse = True
-            join_type = "AND"
-        elif join_type == "NOT_OR":
-            reverse = True
-            join_type = "OR"
-
+        qs: List[Q] = []
         q_kwargs: Dict[str, Any] = {}
         for k, v in kv.items():
-            logic = join_infos.get(k)
-            if logic and isinstance(v, dict):
-                v[".logic"] = logic
-                q = self.translate_kv_condition(
-                    user, request, q, cast(Dict[str, Any], v)
-                )
+            child_join_type, child_reverse = join_infos.get(k, ("", False))
+            if child_join_type:
+                if isinstance(v, dict):
+                    q, iq = self.translate_kv_condition(
+                        user, request, q, cast(Dict[str, Any], v)
+                    )
+                elif isinstance(v, list):
+                    cqs: List[Q] = []
+                    for cv in cast(List[Dict[str, Any]], v):
+                        q, ciq = self.translate_kv_condition(
+                            user,
+                            request,
+                            q,
+                            cv,
+                        )
+                        cqs.append(ciq)
+                    iq = Q(*cqs)
+                else:
+                    assert False
+                iq.join_type = child_join_type
+                if child_reverse:
+                    iq = ~iq
+                qs.append(iq)
                 continue
 
             k = self.model.normalize_field(k)
             v = self.translate_condition(user, q, k, v, request)
             if isinstance(v, QuerySet):
                 q = cast(QuerySet[Model], v)
+            elif isinstance(v, Q):
+                qs.append(v)
             elif (
                 v is not None
                 and v != ""
@@ -253,13 +265,11 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     v = ""
                 q_kwargs[k] = v
         kv_q = Q(
+            *qs,
             **q_kwargs,
-            join_type=join_type,
+            join_type=Q.AND,
         )
-        if reverse:
-            kv_q = ~kv_q
-
-        return q.filter(kv_q)
+        return q, kv_q
 
     def bind(self, router: APIRouter):
         ListPydanticModel = self.model.list()
@@ -352,6 +362,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 ###### 子逻辑, 可选项: `.and` `.or` `.not` `.not_or`
 
 ```javascript
+// (name contains name2 or email contains example2.com)
 {
     ".or": {
         "name.contains": "name2",
@@ -360,13 +371,15 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     "name.contains": "name",
     "email.contains": "example.com",
 }
-```
 
-###### 运算方式, 可选项: `and` `or` `not` `not_or`
-
-```javascript
+// (name contains name2 and email contains example2.com) or (name contains name3)
 {
-    ".logic": "or",
+    ".or": [{
+        "name.contains": "name2"
+        "email.contains": "example2.com",
+    }, {
+        "name.contains": "name3",
+    }],
     "name.contains": "name",
     "email.contains": "example.com",
 }
@@ -397,7 +410,10 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 if condition:
                     for raw in condition:
                         kv = cast(Any, json.loads(raw))
-                        q = self.translate_kv_condition(current_user, request, q, kv)
+                        q, iq = self.translate_kv_condition(
+                            current_user, request, q, kv
+                        )
+                        q = q.filter(iq)
 
                 if include:
                     q = q.only(*include)
