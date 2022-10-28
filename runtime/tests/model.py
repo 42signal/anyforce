@@ -2,7 +2,7 @@ from typing import Optional
 
 from tortoise import fields
 
-from anyforce.model import BaseModel, StrEnum
+from anyforce.model import BaseUpdateModel, StrEnum
 from anyforce.model import fields as afields
 
 
@@ -11,16 +11,16 @@ class CharEnum(StrEnum):
     b = "b", "b"
 
 
-class User(BaseModel):
+class User(BaseUpdateModel):
     email = fields.CharField(64, index=True, null=False, description="邮箱", default="")
     hashed_password = fields.CharField(128, null=False, default="")
 
 
-class Model1(BaseModel):
+class Model1(BaseUpdateModel):
     name = fields.CharField(max_length=32)
 
 
-class Model2(BaseModel):
+class Model2(BaseUpdateModel):
     title = "测试"
 
     int_field = fields.IntField(title="数字字段")

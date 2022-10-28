@@ -509,19 +509,24 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                         if r:
                             obj = r
                             raw = input.dict(exclude_unset=True)
+
                             updated_at = raw.pop("updated_at", None)
                             if updated_at:
                                 # 防止老数据修改
                                 if isinstance(updated_at, str):
                                     updated_at = json.parse_iso_datetime(updated_at)
                                 if isinstance(updated_at, datetime):
-                                    obj_updated_at = obj.updated_at.replace(
-                                        microsecond=int(
-                                            str(obj.updated_at.microsecond)[:3]
-                                        )
+                                    obj_updated_at: Optional[datetime] = getattr(
+                                        obj, "updated_at", None
                                     )
-                                    if obj_updated_at > updated_at:
-                                        raise HTTPPreconditionRequiredError
+                                    if obj_updated_at:
+                                        obj_updated_at = obj_updated_at.replace(
+                                            microsecond=int(
+                                                str(obj_updated_at.microsecond)[:3]
+                                            )
+                                        )
+                                        if obj_updated_at > updated_at:
+                                            raise HTTPPreconditionRequiredError
 
                             obj_obj = copy(obj)
 
