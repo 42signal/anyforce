@@ -16,7 +16,7 @@ def patch_pydantic(
     from_models: Tuple[str, ...] = (),
     required_override: Optional[bool] = None,
     is_form: bool = False,
-    max_levels: int = 1,
+    max_recursion: int = 1,
 ) -> Type[PydanticModel]:
     # 解决数据动态加载的问题
     model_fields: Dict[str, ModelField] = {}
@@ -28,7 +28,7 @@ def patch_pydantic(
             if orig_model:
                 if (
                     orig_model.__qualname__ in from_models
-                    or len(from_models) > max_levels
+                    or len(from_models) > max_recursion
                 ):
                     field = ModelField.infer(
                         name=k,
@@ -66,7 +66,6 @@ def patch_pydantic(
                         field_pydantic_model: Type[Any] = orig_model.detail(
                             from_models=from_models,
                             required_override=required_override,
-                            max_levels=max_levels,
                         )
                     if field.shape == SHAPE_LIST:
                         field = ModelField.infer(

@@ -1,12 +1,43 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Type, cast
+from weakref import WeakKeyDictionary
 
 from fastapi import FastAPI
+from pydantic import BaseModel
+from pydantic.fields import ModelField
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette_context.middleware import RawContextMiddleware
 from tortoise.contrib.fastapi import register_tortoise
 
 from .api.exceptions import register
+
+# TODO: remove after fastapi resolve https://github.com/tiangolo/fastapi/issues/4644
+cloned_types_default: Dict[Type[BaseModel], Type[BaseModel]] = cast(
+    Dict[Type[BaseModel], Type[BaseModel]], WeakKeyDictionary()
+)
+
+
+def patch_fastapi_create_cloned_field() -> None:
+    import fastapi.routing
+    import fastapi.utils
+
+    orig = fastapi.utils.create_cloned_field
+
+    def patch(
+        field: ModelField,
+        *,
+        cloned_types: Optional[Dict[Type[BaseModel], Type[BaseModel]]] = None,
+    ) -> ModelField:
+        return orig(
+            field,
+            cloned_types=cloned_types_default if cloned_types is None else cloned_types,
+        )
+
+    setattr(fastapi.utils, "create_cloned_field", patch)
+    setattr(fastapi.routing, "create_cloned_field", patch)
+
+
+patch_fastapi_create_cloned_field()
 
 
 def create_app(

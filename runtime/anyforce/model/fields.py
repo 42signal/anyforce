@@ -1,6 +1,11 @@
+import math
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Awaitable, List, Literal, Optional, Type, Union
 
+from pypika import functions
+from pypika.enums import SqlTypes
+from pypika.terms import Term
 from tortoise import fields
 from tortoise.fields import DatetimeField
 from tortoise.fields.data import JsonDumpsFunc, JsonLoadsFunc
@@ -132,6 +137,58 @@ class CurrencyField(fields.Field, float):
         if value is None:
             return None
         return round(value * self.multiply)
+
+
+class CurrencyDecimalField(fields.Field, float):
+    """
+    存储为单位为分，支持小数
+    """
+
+    def __init__(
+        self,
+        pk: bool = False,
+        multiply: float = 100.0,
+        decimal_places: int = 1,
+        max_digits: int = 12,
+        **kwargs: Any,
+    ) -> None:
+        if pk:
+            kwargs["generated"] = bool(kwargs.get("generated", True))
+
+        self.multiply = multiply
+        self.decimal_places = decimal_places
+        self.max_digits = max_digits
+        self.precision = self.decimal_places + int(round(math.log(self.multiply, 10)))
+
+        super().__init__(pk=pk, **kwargs)  # type: ignore
+
+    @property
+    def SQL_TYPE(self) -> str:  # type: ignore
+        return f"DECIMAL({self.max_digits},{self.decimal_places})"
+
+    class _db_sqlite:
+        SQL_TYPE = "VARCHAR(40)"
+
+        def function_cast(self, term: Term) -> Term:
+            return functions.Cast(term, SqlTypes.NUMERIC)
+
+    def to_python_value(
+        self, value: Optional[Union[float, Decimal]]
+    ) -> Optional[float]:
+        if value is None:
+            return None
+
+        if isinstance(value, float):
+            return value
+
+        return float(round(value / Decimal(self.multiply), self.precision))
+
+    def to_db_value(
+        self, value: Optional[float], instance: Union[Type[Model], Model]
+    ) -> Optional[Decimal]:
+        if value is None:
+            return None
+        return Decimal(round(value * self.multiply, self.decimal_places))
 
 
 def ForeignKeyField(

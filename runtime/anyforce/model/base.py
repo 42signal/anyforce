@@ -21,14 +21,14 @@ class BaseModel(Model):
     class Meta:
         abstract = True
 
-    # class PydanticMeta:
-    #     max_levels = 1  # 最大模型层级
+    class PydanticMeta:
+        max_recursion = 1
+
     #     computed: Tuple[str, ...] = ()  # 计算量, 异步计算量返回值需要标记为 Optional
-    #     list_exclude: Tuple[str, ...] = ()  # 列表排除
-    #     detail_include: Tuple[str, ...] = ()  # 详情叠加
     #     form_exclude: Tuple[str, ...] = ()  # 表单排除
 
     class FormPydanticMeta:
+        max_recursion = 0
         computed = []
 
     async def dict(self, prefetch: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -39,11 +39,7 @@ class BaseModel(Model):
     @classmethod
     @lru_cache
     def list(cls) -> Type[PydanticModel]:
-        meta: Optional[PydanticMeta] = getattr(cls, "PydanticMeta", None)
-        list_exclude: Tuple[str, ...] = meta and getattr(meta, "list_exclude", ()) or ()
-        return cls.make_pydantic(
-            name="list", exclude=list_exclude, required_override=False
-        )
+        return cls.make_pydantic(name="list", required_override=False)
 
     @classmethod
     @lru_cache
@@ -51,18 +47,11 @@ class BaseModel(Model):
         cls,
         required_override: Optional[bool] = None,
         from_models: Tuple[str, ...] = (),
-        max_levels: Optional[int] = None,
     ) -> Type[PydanticModel]:
-        meta: Optional[PydanticMeta] = getattr(cls, "PydanticMeta", None)
-        detail_include: Tuple[str, ...] = (
-            meta and getattr(meta, "detail_include", ()) or ()
-        )
         return cls.make_pydantic(
             name="detail",
-            include=detail_include,
             required_override=required_override,
             from_models=from_models,
-            max_levels=max_levels,
         )
 
     @classmethod
@@ -98,8 +87,8 @@ class BaseModel(Model):
         exclude: Optional[Tuple[str, ...]] = None,
         required_override: Optional[bool] = None,
         from_models: Tuple[str, ...] = (),
+        max_recursion: Optional[int] = None,
         is_form: bool = False,
-        max_levels: Optional[int] = None,
     ):
         parts = [cls.__module__, cls.__qualname__, name]
         if from_models:
@@ -108,22 +97,20 @@ class BaseModel(Model):
         if required_override is not None:
             parts.append("required" if required_override else "optional")
 
-        meta: Optional[PydanticMeta] = getattr(cls, "PydanticMeta", None)
-        if max_levels is None:
-            max_levels = meta and getattr(meta, "max_levels", None)
-            max_levels = max_levels if max_levels else 1
+        meta = cls.FormPydanticMeta if is_form else cls.PydanticMeta
+        max_recursion = max_recursion if max_recursion else meta.max_recursion
         return patch_pydantic(
             pydantic_model_creator(
                 cls,
                 name=".".join(parts),
                 include=include or (),
                 exclude=exclude or (),
-                meta_override=cls.FormPydanticMeta if is_form else None,
+                meta_override=meta,
             ),
             from_models=(*from_models, cls.__qualname__),
             required_override=required_override,
             is_form=is_form,
-            max_levels=max_levels,
+            max_recursion=max_recursion,
         )
 
     @classmethod
