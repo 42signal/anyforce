@@ -2,14 +2,18 @@ from typing import Any, Optional
 
 from pypika.functions import DistinctOptionFunction
 from pypika.queries import QueryBuilder
-from pypika.terms import Field as pikaField
-from pypika.terms import Order
+from pypika.terms import ArithmeticExpression, Case, Criterion, Field, Order
+from tortoise.functions import Function
+
+
+def case(when: Criterion, then: Any, else_: Any) -> ArithmeticExpression:
+    return Case().when(when, then).else_(else_)  # type: ignore
 
 
 class GroupConcat(DistinctOptionFunction):
     def __init__(
         self,
-        term: pikaField,
+        term: Field,
         order: Order = Order.asc,
         sep: str = ",",
         distinct: bool = True,
@@ -23,3 +27,7 @@ class GroupConcat(DistinctOptionFunction):
 
     def get_special_params_sql(self, **kwargs: Any):
         return f"ORDER BY {self.term_} {self.order.value} SEPARATOR {self.sep}"
+
+
+class GroupConcatFunction(Function):
+    database_func = GroupConcat
