@@ -26,10 +26,10 @@ def patch_pydantic(
         if config:
             orig_model: Optional[Any] = getattr(config, "orig_model", None)
             if orig_model:
-                if (
-                    orig_model.__qualname__ in from_models
-                    or len(from_models) > max_recursion
-                ):
+                if len(from_models) > max_recursion:
+                    if is_form:
+                        continue
+
                     field = ModelField.infer(
                         name=k,
                         value=None,

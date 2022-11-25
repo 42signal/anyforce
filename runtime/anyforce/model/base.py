@@ -27,8 +27,7 @@ class BaseModel(Model):
     #     computed: Tuple[str, ...] = ()  # 计算量, 异步计算量返回值需要标记为 Optional
     #     form_exclude: Tuple[str, ...] = ()  # 表单排除
 
-    class FormPydanticMeta:
-        max_recursion = 0
+    class FormPydanticMeta(PydanticMeta):
         computed = []
 
     async def dict(self, prefetch: Optional[List[str]] = None) -> Dict[str, Any]:
