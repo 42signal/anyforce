@@ -47,7 +47,7 @@ def dumps(
 
 
 def parse_iso_datetime(s: str) -> datetime:
-    return parse_datetime(s)
+    return parse_datetime(s)  # type: ignore
 
 
 def decoder(input: Any) -> Any:
