@@ -97,7 +97,7 @@ class BaseModel(Model):
             parts.append("required" if required_override else "optional")
 
         meta = cls.FormPydanticMeta if is_form else cls.PydanticMeta
-        max_recursion = max_recursion if max_recursion else meta.max_recursion
+        in_max_recursion = getattr(meta, "max_recursion", 0)
         return patch_pydantic(
             pydantic_model_creator(
                 cls,
@@ -109,7 +109,7 @@ class BaseModel(Model):
             from_models=(*from_models, cls.__qualname__),
             required_override=required_override,
             is_form=is_form,
-            max_recursion=max_recursion,
+            max_recursion=max_recursion or in_max_recursion,
         )
 
     @classmethod

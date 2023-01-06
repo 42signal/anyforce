@@ -64,6 +64,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         enable_update: bool = True,
         enable_delete: bool = True,
         enable_get: bool = True,
+        enable_summary: bool = False,
     ) -> None:
         super().__init__()
         self.model = model
@@ -74,6 +75,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         self.enable_update = enable_update
         self.enable_delete = enable_delete
         self.enable_get = enable_get
+        self.enable_summary = enable_summary
 
     async def translate_id(self, user: UserModel, id: str, request: Request) -> str:
         return id
@@ -114,6 +116,20 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         q = q.annotate(**annotates)
         q = q.group_by(*group_by)
         return annotates, q
+
+    async def grouping(
+        self,
+        user: UserModel,
+        q: QuerySet[Model],
+        include: Iterable[str],
+        group_by: List[str],
+    ) -> List[Model]:
+        annotates, group_by_q = self.group_by(user, q, include, group_by)
+        dicts = cast(
+            List[Dict[str, Any]],
+            await group_by_q.values(*group_by, *annotates.keys()),
+        )
+        return [self.model(**v) for v in dicts]
 
     def q(
         self,
@@ -284,6 +300,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             f"{self.model.__module__}.{self.model.__name__}.Response",
             __base__=PydanticBaseModel,
             total=0,
+            summary=(Optional[ListPydanticModel], ...),  # type: ignore
             data=(List[ListPydanticModel], ...),  # type: ignore
         )
 
@@ -391,6 +408,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 request: Request,
                 offset: int = Query(0, title="分页偏移"),
                 limit: int = Query(20, title="分页限额"),
+                include_summary: bool = Query(False, title="是否包含summary数据"),
                 condition: List[str] = Query([], title="查询条件", description=help),
                 order_by: List[str] = Query(
                     [],
@@ -418,6 +436,13 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 if include:
                     q = q.only(*include)
 
+                summary: Optional[Model] = None
+                include_summary = self.enable_summary and include_summary
+                if include_summary:
+                    objs = await self.grouping(current_user, q, include, [])
+                    if objs:
+                        summary = objs[0]
+
                 if group_by:
                     group_by_fields = ",".join([f"`{field}`" for field in group_by])
                     total_q = q.annotate(
@@ -440,12 +465,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
                 q = q.offset(offset).limit(limit)
                 if group_by:
-                    annotates, q = self.group_by(current_user, q, include, group_by)
-                    dicts = cast(
-                        List[Dict[str, Any]],
-                        await q.values(*group_by, *annotates.keys()),
-                    )
-                    objs = [self.model(**v) for v in dicts]
+                    objs = await self.grouping(current_user, q, include, group_by)
                 else:
                     objs = await q
 
@@ -453,8 +473,11 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     for obj in objs:
                         await obj.fetch_related(*prefetch)
 
+                    summary and await summary.fetch_related(*prefetch)
+
                 return Response(
                     total=total,
+                    summary=summary and ListPydanticModel.from_orm(summary),
                     data=[ListPydanticModel.from_orm(obj) for obj in objs],
                 )
 
