@@ -2,11 +2,13 @@ from datetime import datetime, timedelta
 from typing import Any, Callable, List, Optional, Type
 
 from rq.job import Retry
+from rq.registry import ScheduledJobRegistry
 
 class Queue:
     name: str
     connection: Any
     serializer: Any
+    scheduled_job_registry: ScheduledJobRegistry
     def __init__(
         self,
         name: str = ...,
