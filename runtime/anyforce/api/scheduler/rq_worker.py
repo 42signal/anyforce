@@ -3,7 +3,6 @@ from typing import Any, Callable, Dict, List, Optional
 
 from rq import Queue
 from rq.job import Job as RQJOb
-from rq.registry import ScheduledJobRegistry
 
 from .typing import Job
 from .typing import JobStatus as Status
@@ -15,14 +14,13 @@ class Worker(object):
     def __init__(self, queue: Queue) -> None:
         super().__init__()
         self.queue = queue
-        self.registry = ScheduledJobRegistry(
-            self.queue.name,
-            connection=self.queue.connection,
-            serializer=self.queue.serializer,
-        )
 
     def _(self) -> WorkerProtocol:
         return self
+
+    @property
+    def registry(self):
+        return self.queue.scheduled_job_registry
 
     def enqueue_at(
         self, datetime: datetime, f: Callable[..., Any], *args: Any, **kwargs: Any
