@@ -129,7 +129,10 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             List[Dict[str, Any]],
             await group_by_q.values(*group_by, *annotates.keys()),
         )
-        return [self.model(**v) for v in dicts]
+        return [
+            self.model(**{k: v for k, v in dic.items() if v is not None})
+            for dic in dicts
+        ]
 
     def q(
         self,
