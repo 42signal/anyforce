@@ -1,30 +1,36 @@
 [project]
 name = "anyforce"
-version = "0.19.6"
+version = "0.19.7"
 description = ""
 authors = [
     {name = "exherb", email = "i@4leaf.me"},
 ]
 dependencies = [
-    "fastapi==0.75.2",
-    "uvicorn[standard]==0.17.6",
-    "pydantic[email]==1.9.0",
+    "fastapi==0.89.1",
+    "uvicorn[standard]==0.20.0",
+    "pydantic[email]==1.10.4",
     "python-jose[cryptography]==3.3.0",
-    "tortoise-orm==0.19.0",
+    "tortoise-orm==0.19.3",
     "passlib[bcrypt]==1.7.4",
-    "requests==2.27.1",
-    "types-requests==2.27.20",
-    "orjson==3.6.8",
-    "python-json-logger==2.0.2",
-    "Jinja2==3.1.1",
-    "colorama==0.4.4",
-    "aiohttp[speedups]==3.8.1",
-    "starlette-context==0.3.3",
+    "requests==2.28.2",
+    "types-requests==2.28.11.8",
+    "orjson==3.8.5",
+    "python-json-logger==2.0.4",
+    "Jinja2==3.1.2",
+    "colorama==0.4.6",
+    "aiohttp[speedups]==3.8.3",
+    "starlette-context==0.3.5",
     "itsdangerous==2.1.2",
     "inflection==0.5.1",
     "aenum==3.1.11",
     "python-dateutil==2.8.2",
-    "rq==1.10.1",
+    "rq==1.12.0",
+    "twine==4.0.2",
+    "bleach==6.0.0",
+    "yarl==1.8.2",
+    "httptools==0.5.0",
+    "frozenlist==1.3.3",
+    "uvloop==0.17.0",
 ]
 requires-python = ">=3.8"
 license = {text = "COPYRIGHT"}
@@ -52,15 +58,16 @@ verify_ssl = true
 
 [tool.pdm.dev-dependencies]
 dev = [
-    "flake8==4.0.1",
-    "isort==5.10.1",
-    "black==22.3.0",
-    "pytest==7.1.2",
-    "typer==0.4.1",
-    "pytest-asyncio==0.18.3",
-    "Faker==13.4.0",
-    "pytest-cov==3.0.0",
-    "twine==4.0.0",
+    "flake8==5.0.4",
+    "isort==5.12.0",
+    "black==23.1.0",
+    "pytest==7.2.1",
+    "typer==0.7.0",
+    "pytest-asyncio>=0.20.3",
+    "Faker==16.6.1",
+    "pytest-cov==4.0.0",
+    "twine==4.0.2",
+    "httpx>=0.23.3",
 ]
 
 [tool.isort]
@@ -69,6 +76,7 @@ line_length = 79
 multi_line_output = 3
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 testpaths = [
     "tests",
 ]

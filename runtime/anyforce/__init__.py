@@ -7,7 +7,7 @@ from pydantic.fields import ModelField
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette_context.middleware import RawContextMiddleware
-from tortoise.contrib.fastapi import register_tortoise
+from tortoise.contrib.fastapi import register_tortoise  # type: ignore
 
 from .api.exceptions import register
 

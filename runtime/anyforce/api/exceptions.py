@@ -159,6 +159,6 @@ def handlers():
 
 
 def register(app: FastAPI):
-    for (errors, handler) in handlers():
+    for errors, handler in handlers():
         for e in errors:
             app.exception_handler(e)(handler)  # type: ignore

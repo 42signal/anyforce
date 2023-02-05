@@ -22,23 +22,22 @@ TestConfigs = Iterable[
 
 
 class TestAPI:
-    def endpoint(self) -> str:
-        raise NotImplementedError()
-
     @cached_property
     def faker(self) -> Faker:
         return Faker()
 
-    def create_tests(
+    def test_create(
         self,
-    ) -> TestConfigs:
-        return []
-
-    def test_create(self, client: TestClient, database: bool, router: APIRouter):
+        client: TestClient,
+        database: bool,
+        router: APIRouter,
+        endpoint: str,
+        create_tests: TestConfigs,
+    ):
         assert router
         assert database
-        for json, status_code, callback in self.create_tests():
-            r = post(self.endpoint(), json=json, session=client)
+        for json, status_code, callback in create_tests:
+            r = post(client, endpoint, json=json)
             self.log_request(json, status_code, r)
 
             obj = r.json_object()
@@ -46,18 +45,21 @@ class TestAPI:
                 self.assert_obj(obj)
                 self.log_compare(obj, jsonable_encoder(json))
 
-            callback and callback(json, obj)
+            if callback:
+                callback(json, obj)
 
-    def list_tests(
+    def test_list(
         self,
-    ) -> TestConfigs:
-        return []
-
-    def test_list(self, client: TestClient, database: bool, router: APIRouter):
+        client: TestClient,
+        database: bool,
+        router: APIRouter,
+        endpoint: str,
+        list_tests: TestConfigs,
+    ):
         assert router
         assert database
-        for params, status_code, callback in self.list_tests():
-            r = get(self.endpoint(), params=params, session=client)
+        for params, status_code, callback in list_tests:
+            r = get(client, endpoint, params=params)
             self.log_request(params, status_code, r)
 
             r = r.json_object()
@@ -83,22 +85,25 @@ class TestAPI:
                         logger.info(f"prefetch: {prefetch} => {r['data']}")
                     assert exist
 
-            callback and callback(params, r)
+            if callback:
+                callback(params, r)
 
-    def get_tests(
+    def test_get(
         self,
-    ) -> TestConfigs:
-        return []
-
-    def test_get(self, client: TestClient, database: bool, router: APIRouter):
+        client: TestClient,
+        database: bool,
+        router: APIRouter,
+        endpoint: str,
+        get_tests: TestConfigs,
+    ):
         assert router
         assert database
-        for params, status_code, callback in self.get_tests():
+        for params, status_code, callback in get_tests:
             input_params = params.copy()
             r = get(
-                f"{self.endpoint()}/{params.pop('id')}",
+                client,
+                f"{endpoint}/{params.pop('id')}",
                 params=params,
-                session=client,
             )
             self.log_request(input_params, status_code, r)
 
@@ -112,24 +117,27 @@ class TestAPI:
                 for k in prefetch:
                     assert obj.get(k) is not None
 
-            callback and callback(params, obj)
+            if callback:
+                callback(params, obj)
 
-    def update_tests(
+    def test_update(
         self,
-    ) -> TestConfigs:
-        return []
-
-    def test_update(self, client: TestClient, database: bool, router: APIRouter):
+        client: TestClient,
+        database: bool,
+        router: APIRouter,
+        endpoint: str,
+        update_tests: TestConfigs,
+    ):
         assert router
         assert database
-        for params, status_code, callback in self.update_tests():
+        for params, status_code, callback in update_tests:
             input_params = params.copy()
             body = params.pop("body", {})
             r = put(
-                f"{self.endpoint()}/{params.pop('id')}",
+                client,
+                f"{endpoint}/{params.pop('id')}",
                 json=body,
                 params=params,
-                session=client,
             )
             self.log_request(input_params, status_code, r)
 
@@ -138,22 +146,25 @@ class TestAPI:
                 self.assert_obj(obj)
                 self.log_compare(obj, body)
 
-            callback and callback(params, obj)
+            if callback:
+                callback(params, obj)
 
-    def delete_tests(
+    def test_delete(
         self,
-    ) -> TestConfigs:
-        return []
-
-    def test_delete(self, client: TestClient, database: bool, router: APIRouter):
+        client: TestClient,
+        database: bool,
+        router: APIRouter,
+        endpoint: str,
+        delete_tests: TestConfigs,
+    ):
         assert router
         assert database
-        for params, status_code, callback in self.delete_tests():
+        for params, status_code, callback in delete_tests:
             input_params = params.copy()
             r = delete(
-                f"{self.endpoint()}/{params.pop('id')}",
+                client,
+                f"{endpoint}/{params.pop('id')}",
                 params=params,
-                session=client,
             )
             self.log_request(input_params, status_code, r)
 
@@ -162,7 +173,8 @@ class TestAPI:
                 assert obj
                 assert obj["id"]
 
-            callback and callback(params, obj)
+            if callback:
+                callback(params, obj)
 
     @staticmethod
     def log_request(input: Any, status_code: int, r: Any):

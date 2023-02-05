@@ -5,10 +5,14 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Type, cast
 
 from tortoise import Tortoise, fields
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.contrib.pydantic import PydanticModel, pydantic_model_creator
+from tortoise.contrib.pydantic.base import PydanticModel
+from tortoise.contrib.pydantic.creator import (
+    pydantic_model_creator,  # type: ignore
+)
 from tortoise.contrib.pydantic.creator import PydanticMeta
+from tortoise.fields.base import Field
 from tortoise.fields.relational import ManyToManyFieldInstance
-from tortoise.models import Field, MetaInfo, Model
+from tortoise.models import MetaInfo, Model
 
 from .fields import LocalDatetimeField
 from .patch import patch_pydantic
@@ -137,11 +141,14 @@ class BaseModel(Model):
         if len(m2ms) == 0:
             return
 
-        for m2m_field, values in m2ms.items():
-            model = cast(
-                ManyToManyFieldInstance, self._meta.fields_map[m2m_field]
-            ).related_model
-            m2m = getattr(self, m2m_field)
+        model_meta: MetaInfo = getattr(self, "_meta")
+        fields_map: Dict[str, Field[Any]] = getattr(model_meta, "fields_map")
+        for m2m_field_name, values in m2ms.items():
+            m2m_field = fields_map[m2m_field_name]
+            if not isinstance(m2m_field, ManyToManyFieldInstance):
+                continue
+            model = m2m_field.related_model
+            m2m = getattr(self, m2m_field_name)
             await m2m.clear()
             for raw in values:
                 value_id = raw.get("id")
@@ -197,17 +204,25 @@ class BaseModel(Model):
     @lru_cache
     def get_field(
         cls, model_name: str, field_name: str
-    ) -> Tuple[Optional[Type[Model]], Optional[Field]]:
+    ) -> Tuple[Optional[Type[Model]], Optional[Field[Any]]]:
         model = cls.get_model(model_name)
-        meta: Optional[MetaInfo] = model and getattr(model, "_meta")
-        field = model and meta and meta.fields_map.get(field_name)
-        return model, field
+        if model:
+            model_meta = getattr(model, "_meta")
+            fields_map: Dict[str, Field[Any]] = (
+                getattr(model_meta, "fields_map") if model_meta else {}
+            )
+            field = fields_map.get(field_name)
+            return model, field
+        else:
+            return model, None
 
     @classmethod
     @lru_cache
     def get_field_model(cls, field: str) -> Type[Model]:
-        meta: MetaInfo = getattr(cls, "_meta")
-        fields_map = meta.fields_map
+        model_meta = getattr(cls, "_meta")
+        fields_map: Dict[str, Field[Any]] = (
+            getattr(model_meta, "fields_map") if model_meta else {}
+        )
         fk_field = fields_map[field]
         model_name = getattr(fk_field, "model_name")
         model = cls.get_model(model_name)

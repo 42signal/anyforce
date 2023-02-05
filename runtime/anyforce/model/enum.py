@@ -1,19 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Type, TypeVar
+from typing import Any, Type, TypeVar
 
 from aenum import EJECT
-
-if TYPE_CHECKING:
-    from enum import Enum
-    from enum import IntEnum as aIntEnum
-
-    class aStrEnum(str, Enum):
-        pass
-
-else:
-    from aenum import IntEnum as aIntEnum
-    from aenum import StrEnum as aStrEnum
+from aenum import IntEnum as aIntEnum
+from aenum import StrEnum as aStrEnum
 
 
 class EnumMissingError(Exception):

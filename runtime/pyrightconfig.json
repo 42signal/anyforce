@@ -6,14 +6,9 @@
   ],
   "exclude": [
     "./**/__pycache__",
-    "./__pypackages__",
+    "./.venv",
     "./node_modules",
     "./dist"
-  ],
-  "extraPaths": [
-    "./__pypackages__/3.8/lib",
-    "./__pypackages__/3.9/lib",
-    "./__pypackages__/3.10/lib"
   ],
   "stubPath": "./typings"
 }
