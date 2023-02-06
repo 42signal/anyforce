@@ -1,9 +1,10 @@
 from typing import Any, Optional
 
+from pypika.enums import Order
 from pypika.functions import DistinctOptionFunction
 from pypika.queries import QueryBuilder
-from pypika.terms import ArithmeticExpression, Case, Criterion, Field, Order
-from tortoise.functions import Function
+from pypika.terms import ArithmeticExpression, Case, Criterion, Field
+from tortoise.expressions import Function
 
 
 def case(when: Criterion, then: Any, else_: Any) -> ArithmeticExpression:

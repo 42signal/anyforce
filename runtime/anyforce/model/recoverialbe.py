@@ -8,7 +8,6 @@ from .base import BaseUpdateModel
 
 
 class RecoverableModel(BaseUpdateModel):
-
     is_deleted = fields.BooleanField(null=False, description="是否已经删除", default=False)
     delete_or_recover_at = fields.DatetimeField(null=True, description="删除时间")
 

@@ -1,13 +1,15 @@
+import json as stdjson
 from typing import Any, Dict, List, Optional, Union
 
-import requests
-from requests.utils import dict_from_cookiejar
+import httpx
+from fastapi.testclient import TestClient
+from requests.utils import dict_from_cookiejar  # type: ignore
 
 from ..json import raw_dumps
 
 
 class Response(object):
-    def __init__(self, r: requests.Response) -> None:
+    def __init__(self, r: httpx.Response) -> None:
         self.r = r
 
     @property
@@ -21,10 +23,6 @@ class Response(object):
     @property
     def text(self) -> str:
         return self.r.text
-
-    @property
-    def raw(self) -> Any:
-        return self.r.raw
 
     @property
     def status_code(self) -> int:
@@ -45,114 +43,106 @@ class Response(object):
 
 
 def request(
+    client: TestClient,
     method: str,
     url: str,
     params: Optional[Dict[str, Any]] = None,
     headers: Optional[Dict[str, Any]] = None,
     json: Optional[Any] = None,
-    session: Optional[requests.Session] = None,
     allow_redirects: bool = True,
     *args: Any,
     **kwargs: Any,
 ) -> Response:
-    request_session = session or requests.session()
-    try:
-        data = kwargs.pop("data", None)
-        headers = headers or {}
-        if json and not data:
-            data = raw_dumps(json)
-            headers["Content-Type"] = "application/json"
-        r = request_session.request(  # type: ignore
-            method,
-            url,
-            headers=headers,
-            params=params,
-            data=data,
-            allow_redirects=allow_redirects,
-            *args,
-            **kwargs,
-        )
-        return Response(r)
-    finally:
-        if session is None:
-            request_session.close()
+    if json:
+        json = stdjson.loads(raw_dumps(json))
+    r = client.request(
+        method,
+        url,
+        headers=headers,
+        params=params,
+        json=json,
+        allow_redirects=allow_redirects,
+        *args,
+        **kwargs,
+    )
+    return Response(r)
 
 
 def get(
+    client: TestClient,
     url: str,
     params: Optional[Dict[str, Any]] = None,
     headers: Optional[Dict[str, Any]] = None,
-    session: Optional[requests.Session] = None,
     *args: Any,
     **kwargs: Any,
 ) -> Response:
     return request(
+        client,
         "GET",
         url,
         params=params,
         headers=headers,
-        session=session,
         *args,
         **kwargs,
     )
 
 
 def post(
+    client: TestClient,
     url: str,
     params: Optional[Dict[str, Any]] = None,
     headers: Optional[Dict[str, Any]] = None,
     json: Optional[Any] = None,
-    session: Optional[requests.Session] = None,
     *args: Any,
     **kwargs: Any,
 ) -> Response:
     return request(
+        client,
         "POST",
         url,
         params=params,
         headers=headers,
         json=json,
-        session=session,
         *args,
         **kwargs,
     )
 
 
 def put(
+    client: TestClient,
     url: str,
     params: Optional[Dict[str, Any]] = None,
     headers: Optional[Dict[str, Any]] = None,
     json: Optional[Any] = None,
-    session: Optional[requests.Session] = None,
     *args: Any,
     **kwargs: Any,
 ) -> Response:
     return request(
+        client,
         "PUT",
         url,
         params=params,
         headers=headers,
         json=json,
-        session=session,
         *args,
         **kwargs,
     )
 
 
 def delete(
+    client: TestClient,
     url: str,
     params: Optional[Dict[str, Any]] = None,
     headers: Optional[Dict[str, Any]] = None,
-    session: Optional[requests.Session] = None,
     *args: Any,
     **kwargs: Any,
 ) -> Response:
     return request(
+        client,
         "DELETE",
         url,
         params=params,
         headers=headers,
-        session=session,
         *args,
         **kwargs,
     )

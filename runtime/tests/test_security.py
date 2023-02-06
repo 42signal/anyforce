@@ -1,6 +1,5 @@
 import time
 
-import pytest
 from faker import Faker
 from jose import ExpiredSignatureError
 
@@ -9,7 +8,6 @@ from anyforce.api.security import jwt, password_context
 from .model import User
 
 
-@pytest.mark.asyncio
 async def test_jwt(database: bool, faker: Faker):
     assert database
     email = faker.email()

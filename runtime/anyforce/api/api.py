@@ -23,10 +23,10 @@ from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import create_model
 from pypika.terms import Term
-from tortoise.expressions import RawSQL
-from tortoise.functions import Function
-from tortoise.models import Field, MetaInfo
-from tortoise.queryset import Q, QuerySet
+from tortoise.expressions import Function, Q, RawSQL
+from tortoise.fields.base import Field
+from tortoise.models import MetaInfo
+from tortoise.queryset import QuerySet
 from tortoise.transactions import in_transaction
 
 from .. import json
@@ -91,7 +91,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         return v
 
     def group_by_f(
-        self, group_by: str, field: Field
+        self, group_by: str, field: Field[Any]
     ) -> Optional[Union[Function, Term]]:
         return None
 
@@ -103,12 +103,13 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         group_by: List[str],
     ):
         model_meta: MetaInfo = getattr(q.model, "_meta")
-        field_names: Iterable[str] = include or model_meta.fields_map.keys()
+        fields_map: Dict[str, Field[Any]] = getattr(model_meta, "fields_map")
+        field_names: Iterable[str] = include or fields_map.keys()
         annotates: Dict[str, Union[Function, Term]] = {}
         for field_name in field_names:
             if field_name in group_by:
                 continue
-            field = model_meta.fields_map[field_name]
+            field = fields_map[field_name]
             annotate = self.group_by_f(field_name, field)
             if annotate is None:
                 continue
@@ -125,10 +126,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         group_by: List[str],
     ) -> List[Model]:
         annotates, group_by_q = self.group_by(user, q, include, group_by)
-        dicts = cast(
-            List[Dict[str, Any]],
-            await group_by_q.values(*group_by, *annotates.keys()),
-        )
+        dicts = await group_by_q.values(*group_by, *annotates.keys())
         return [
             self.model(**{k: v for k, v in dic.items() if v is not None})
             for dic in dicts
@@ -475,8 +473,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 if prefetch:
                     for obj in objs:
                         await obj.fetch_related(*prefetch)
-
-                    summary and await summary.fetch_related(*prefetch)
+                    if summary:
+                        await summary.fetch_related(*prefetch)
 
                 return Response(
                     total=total,

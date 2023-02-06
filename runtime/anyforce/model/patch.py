@@ -2,10 +2,10 @@ import inspect
 from typing import Any, Dict, List, Optional, Tuple, Type, cast
 
 from pydantic import validate_model
+from pydantic.config import Extra
 from pydantic.fields import SHAPE_LIST, SHAPE_SINGLETON, ModelField
-from pydantic.main import Extra
 from tortoise import fields
-from tortoise.contrib.pydantic import PydanticModel
+from tortoise.contrib.pydantic.base import PydanticModel
 from tortoise.exceptions import NoValuesFetched
 from tortoise.fields.relational import NoneAwaitable
 from tortoise.queryset import AwaitableQuery
@@ -58,12 +58,12 @@ def patch_pydantic(
                             continue
 
                     if is_form:
-                        field_pydantic_model: Type[Any] = orig_model.form(
+                        field_pydantic_model: Type[object] = orig_model.form(
                             from_models=from_models,
                             required_override=False,
                         )
                     else:
-                        field_pydantic_model: Type[Any] = orig_model.detail(
+                        field_pydantic_model: Type[object] = orig_model.detail(
                             from_models=from_models,
                             required_override=required_override,
                         )
@@ -84,7 +84,10 @@ def patch_pydantic(
                             config=config,
                         )
 
-        field.allow_none = True
+        if field.allow_none:
+            field.required = False
+        else:
+            field.allow_none = True
         model_fields[k] = field
         if required_override is not None:
             field.required = required_override

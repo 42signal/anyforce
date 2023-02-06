@@ -2,7 +2,7 @@
     "name": "runtime",
     "private": true,
     "scripts": {
-        "prepare": "pip install pdm==2.1.2 && mkdir __pypackages__ && pdm install",
+        "prepare": "pip3 install pdm==2.4.2 && pdm install && touch $(echo .venv/lib/python3*/site-packages/pypika)/py.typed",
         "lint": "concurrently npm:lint-flake8 npm:lint-pyright",
         "lint-flake8": "pdm run python -m flake8",
         "lint-pyright": "pdm run pyright -p .",
@@ -19,6 +19,6 @@
         ]
     },
     "devDependencies": {
-        "pyright": "1.1.184"
+        "pyright": "1.1.270"
     }
 }
