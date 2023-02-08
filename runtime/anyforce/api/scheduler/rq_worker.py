@@ -58,13 +58,13 @@ class Worker(object):
                     if not matched:
                         continue
 
-                status = Status.t(Status.pending)
+                status = Status.pending
                 if job.is_finished:
-                    status = Status.t(Status.finished)
+                    status = Status.finished
                 elif job.is_failed:
-                    status = Status.t(Status.failed)
+                    status = Status.failed
                 elif job.is_canceled or job.is_stopped:
-                    status = Status.t(Status.canceled)
+                    status = Status.canceled
 
                 jobs.append(
                     Job(

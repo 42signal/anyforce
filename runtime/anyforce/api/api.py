@@ -295,7 +295,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         UpdateForm = self.update_form
 
         DetailPydanticModels = Union[
-            DetailPydanticModel, List[DetailPydanticModel]  # type: ignore
+            List[DetailPydanticModel], DetailPydanticModel  # type: ignore
         ]
         Response = create_model(
             f"{self.model.__module__}.{self.model.__name__}.Response",
@@ -573,7 +573,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             if isinstance(obj, PydanticBaseModel)
                             else DetailPydanticModel.from_orm(obj)
                         )
-                    return len(rtns) > 1 and rtns or rtns[0]
+                    return rtns if len(rtns) > 1 else rtns[0]
 
             methods["update"] = update
 

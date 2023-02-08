@@ -93,7 +93,7 @@ class SplitCharField(fields.CharField, List[str]):
         return True
 
 
-class CurrencyField(fields.Field[float], float):
+class CurrencyField(fields.Field[int], float):
     SQL_TYPE = "BIGINT"
     allows_generated = True
 
@@ -197,6 +197,10 @@ class CurrencyDecimalField(fields.Field[float], float):
         if value is None:
             return None
         return Decimal(round(value * self.multiply, self.decimal_places))
+
+
+def CharField(max_length: int, **kwargs: Any) -> Union[fields.CharField, str]:
+    return fields.CharField(max_length=max_length, **kwargs)
 
 
 def ForeignKeyField(

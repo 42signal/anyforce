@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Type, TypeVar
-
-from aenum import EJECT
-from aenum import IntEnum as aIntEnum
-from aenum import StrEnum as aStrEnum
+from enum import Enum
+from enum import IntEnum as StdlibIntEnum
+from typing import Any, Callable, Optional, Tuple
 
 
 class EnumMissingError(Exception):
@@ -13,41 +11,40 @@ class EnumMissingError(Exception):
         self.enum_type = enum_type
         self.value = value
 
-
-StrEnumT = TypeVar("StrEnumT", bound="StrEnum")
-
-
-class StrEnum(aStrEnum):
-    _init_ = "value __doc__"
-
-    @classmethod
-    def _missing_value_(cls, value: Any):
-        raise EnumMissingError(cls, value, f"枚举值 {value} 不存在")
-
-    @classmethod
-    def t(cls: Type[StrEnumT], v: Any) -> StrEnumT:
-        return v
+    @staticmethod
+    def missing(enum_type: Any, value: Any):
+        meta: Optional[Callable[[], Any]] = getattr(enum_type, "meta", None)
+        title: str = getattr(meta(), "title", "") if meta else ""
+        return EnumMissingError(enum_type, value, f"{title} 不存在枚举值 {value}")
 
 
-IntEnumT = TypeVar("IntEnumT", bound="IntEnum")
+class IntEnum(StdlibIntEnum):
+    title: str
+    args: Tuple[str, ...]
 
-
-class IntEnum(aIntEnum):
-    _init_ = "value __doc__"
+    def __new__(cls, value: int, title: str = "", *args: str):
+        obj = int.__new__(cls, value)
+        obj._value_ = value
+        obj.title = title
+        obj.args = args
+        return obj
 
     @classmethod
-    def _missing_value_(cls, value: Any):
-        raise EnumMissingError(cls, value, f"枚举值 {value} 不存在")
+    def _missing_(cls, value: Any):
+        raise EnumMissingError.missing(cls, value)
+
+
+class StrEnum(str, Enum):
+    title: str  # type: ignore
+    args: Tuple[str, ...]
+
+    def __new__(cls, value: str, title: str = "", *args: str):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj.title = title
+        obj.args = args
+        return obj
 
     @classmethod
-    def t(cls: Type[IntEnumT], v: Any) -> IntEnumT:
-        return v
-
-
-def eject(v: Any):
-    return v
-
-
-def allow_eject(enum: Any):
-    enum._missing_value_ = eject
-    enum._boundary_ = EJECT
+    def _missing_(cls, value: Any):
+        raise EnumMissingError.missing(cls, value)

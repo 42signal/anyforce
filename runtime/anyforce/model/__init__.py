@@ -3,7 +3,7 @@ from typing import Any, Dict
 from tortoise import Tortoise
 
 from .base import BaseModel, BaseUpdateModel
-from .enum import IntEnum, StrEnum, allow_eject
+from .enum import IntEnum, StrEnum
 from .recoverialbe import RecoverableModel
 
 
@@ -19,7 +19,6 @@ def init_models(config: Dict[str, Any]):
 __all__ = [
     "StrEnum",
     "IntEnum",
-    "allow_eject",
     "BaseModel",
     "BaseUpdateModel",
     "RecoverableModel",
