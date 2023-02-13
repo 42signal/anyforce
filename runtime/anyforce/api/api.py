@@ -11,6 +11,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -289,6 +290,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         return q, kv_q
 
     def bind(self, router: APIRouter):
+        list_exclude: Set[str] = set(self.model.list_exclude() or [])
         ListPydanticModel = self.model.list()
         DetailPydanticModel = self.model.detail()
         CreateForm = self.create_form
@@ -433,6 +435,10 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             current_user, request, q, kv
                         )
                         q = q.filter(iq)
+
+                if not include and list_exclude:
+                    fields = self.model.fields_db_projection()
+                    include = list(set(fields.keys()) - list_exclude)
 
                 if include:
                     q = q.only(*include)
