@@ -12,7 +12,7 @@ from tortoise.contrib.pydantic.creator import (
 from tortoise.contrib.pydantic.creator import PydanticMeta
 from tortoise.fields.base import Field
 from tortoise.fields.relational import ManyToManyFieldInstance
-from tortoise.models import MetaInfo, Model
+from tortoise.models import Model
 
 from .fields import LocalDatetimeField
 from .patch import patch_pydantic
@@ -30,9 +30,10 @@ class BaseModel(Model):
 
     #     computed: Tuple[str, ...] = ()  # 计算量, 异步计算量返回值需要标记为 Optional
     #     form_exclude: Tuple[str, ...] = ()  # 表单排除
+    #     list_exclude: Tuple[str, ...] = ()  # 列表排除
 
     class FormPydanticMeta(PydanticMeta):
-        computed = []
+        computed = []  # 计算量不能作为 form 传入, 特殊情况可覆盖
 
     async def dict(self, prefetch: Optional[List[str]] = None) -> Dict[str, Any]:
         if prefetch:
@@ -40,9 +41,25 @@ class BaseModel(Model):
         return self.detail().from_orm(self).dict()
 
     @classmethod
+    def list_exclude(cls) -> Optional[Tuple[str, ...]]:
+        return getattr(cls.PydanticMeta, "list_exclude", None)
+
+    @classmethod
+    def fields_map(cls) -> Dict[str, Field[Any]]:
+        model_meta = getattr(cls, "_meta")
+        return getattr(model_meta, "fields_map") if model_meta else {}
+
+    @classmethod
+    def fields_db_projection(cls) -> Dict[str, str]:
+        model_meta = getattr(cls, "_meta")
+        return getattr(model_meta, "fields_db_projection") if model_meta else {}
+
+    @classmethod
     @lru_cache
     def list(cls) -> Type[PydanticModel]:
-        return cls.make_pydantic(name="list", required_override=False)
+        return cls.make_pydantic(
+            name="list", required_override=False, exclude=cls.list_exclude()
+        )
 
     @classmethod
     @lru_cache
@@ -141,8 +158,7 @@ class BaseModel(Model):
         if len(m2ms) == 0:
             return
 
-        model_meta: MetaInfo = getattr(self, "_meta")
-        fields_map: Dict[str, Field[Any]] = getattr(model_meta, "fields_map")
+        fields_map = self.fields_map()
         for m2m_field_name, values in m2ms.items():
             m2m_field = fields_map[m2m_field_name]
             if not isinstance(m2m_field, ManyToManyFieldInstance):
@@ -219,10 +235,7 @@ class BaseModel(Model):
     @classmethod
     @lru_cache
     def get_field_model(cls, field: str) -> Type[Model]:
-        model_meta = getattr(cls, "_meta")
-        fields_map: Dict[str, Field[Any]] = (
-            getattr(model_meta, "fields_map") if model_meta else {}
-        )
+        fields_map = cls.fields_map()
         fk_field = fields_map[field]
         model_name = getattr(fk_field, "model_name")
         model = cls.get_model(model_name)
