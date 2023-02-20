@@ -198,6 +198,16 @@ class BaseModel(Model):
         ]
         return await super().fetch_related(*normlized_args, using_db=using_db)
 
+    async def fetch_related_lazy(
+        self, path: str, using_db: Optional[BaseDBAsyncClient] = None
+    ) -> Optional[Any]:
+        instance = getattr(self, path)
+        if isinstance(instance, Model):
+            return instance
+
+        await self.fetch_related(path, using_db=using_db)
+        return getattr(self, path)
+
     @staticmethod
     def normalize_field(field: str) -> str:
         return field.replace(".", "__")
