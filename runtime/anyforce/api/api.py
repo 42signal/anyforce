@@ -117,7 +117,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             annotates[field_name] = annotate
         q = q.annotate(**annotates)
         q = q.group_by(*group_by)
-        return annotates, q
+        return q
 
     async def grouping(
         self,
@@ -126,12 +126,19 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         include: Iterable[str],
         group_by: List[str],
     ) -> List[Model]:
-        annotates, group_by_q = self.group_by(user, q, include, group_by)
-        dicts = await group_by_q.values(*group_by, *annotates.keys())
-        return [
-            self.model(**{k: v for k, v in dic.items() if v is not None})
-            for dic in dicts
-        ]
+        group_by_q = self.group_by(user, q, include, group_by)
+        dicts = await group_by_q.values(
+            *set(group_by).union(getattr(group_by_q, "_annotations").keys())
+        )
+        es: List[Model] = []
+        for dic in dicts:
+            e = self.model()
+            for k, v in dic.items():
+                if v is None:
+                    continue
+                setattr(e, k, v)
+            es.append(e)
+        return es
 
     def q(
         self,
