@@ -86,7 +86,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     ) -> List[str]:
         return [self.model.normalize_field(ordering)]
 
-    def translate_condition(
+    async def translate_condition(
         self, user: UserModel, q: QuerySet[Model], k: str, v: Any, request: Request
     ) -> Any:
         return v
@@ -236,7 +236,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             raise HTTPNotFoundError
         return objs
 
-    def translate_kv_condition(
+    async def translate_kv_condition(
         self, user: UserModel, request: Request, q: QuerySet[Model], kv: Dict[str, Any]
     ):
         join_infos: Dict[str, Tuple[str, bool]] = {
@@ -252,13 +252,13 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             child_join_type, child_reverse = join_infos.get(k, ("", False))
             if child_join_type:
                 if isinstance(v, dict):
-                    q, iq = self.translate_kv_condition(
+                    q, iq = await self.translate_kv_condition(
                         user, request, q, cast(Dict[str, Any], v)
                     )
                 elif isinstance(v, list):
                     cqs: List[Q] = []
                     for cv in cast(List[Dict[str, Any]], v):
-                        q, ciq = self.translate_kv_condition(
+                        q, ciq = await self.translate_kv_condition(
                             user,
                             request,
                             q,
@@ -275,7 +275,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 continue
 
             k = self.model.normalize_field(k)
-            v = self.translate_condition(user, q, k, v, request)
+            v = await self.translate_condition(user, q, k, v, request)
             if isinstance(v, QuerySet):
                 q = cast(QuerySet[Model], v)
             elif isinstance(v, Q):
@@ -438,7 +438,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 if condition:
                     for raw in condition:
                         kv = cast(Any, json.loads(raw))
-                        q, iq = self.translate_kv_condition(
+                        q, iq = await self.translate_kv_condition(
                             current_user, request, q, kv
                         )
                         q = q.filter(iq)

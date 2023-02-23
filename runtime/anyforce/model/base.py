@@ -33,7 +33,7 @@ class BaseModel(Model):
     #     list_exclude: Tuple[str, ...] = ()  # 列表排除
 
     class FormPydanticMeta(PydanticMeta):
-        computed = []  # 计算量不能作为 form 传入, 特殊情况可覆盖
+        computed: Tuple[str, ...] = tuple()  # 计算量不能作为 form 传入, 模拟可编辑时可覆盖
 
     async def dict(self, prefetch: Optional[List[str]] = None) -> Dict[str, Any]:
         if prefetch:
