@@ -32,6 +32,7 @@ from tortoise.transactions import in_transaction
 
 from .. import json
 from ..model import BaseModel
+from ..model.query import DistinctCountQuery
 from .exceptions import HTTPNotFoundError, HTTPPreconditionRequiredError
 
 UserModel = TypeVar("UserModel")
@@ -466,8 +467,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     r = cast(List[Dict[str, int]], await total_q)
                     total = r[0]["total"] if r else 0
                 else:
+                    total = await DistinctCountQuery(q.count())
                     q = q.distinct()
-                    total = await q.count()
 
                 if order_by:
                     orderings: List[str] = []
