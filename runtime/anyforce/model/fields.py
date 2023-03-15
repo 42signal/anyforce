@@ -137,7 +137,7 @@ class CurrencyField(fields.Field[int], float):
         if isinstance(value, float):
             return value
 
-        return value / self.multiply
+        return float(value) / self.multiply
 
     def to_db_value(
         self, value: Optional[float], instance: Union[Type[Model], Model]
