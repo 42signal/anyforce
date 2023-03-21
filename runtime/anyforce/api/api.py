@@ -115,7 +115,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             annotate = self.group_by_f(field_name, field)
             if annotate is None:
                 continue
-            annotates[field_name] = annotate
+            annotates[f"_{field_name}_"] = annotate
         q = q.annotate(**annotates)
         q = q.group_by(*group_by)
         return q
@@ -137,6 +137,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             for k, v in dic.items():
                 if v is None:
                     continue
+                k = k[1:-1] if k.startswith("_") and k.endswith("_") else k
                 setattr(e, k, v)
             es.append(e)
         return es
