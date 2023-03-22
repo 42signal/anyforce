@@ -6,6 +6,7 @@
       "lint": "lerna run lint --parallel",
       "format": "lerna run format --parallel",
       "test": "lerna run test --parallel",
+      "build": "lerna run build --parallel",
       "publish": "lerna run publish",
       "update": "lerna run update --parallel",
       "postinstall": "husky install && lerna bootstrap --ignore-scripts && lerna run prepare --parallel"

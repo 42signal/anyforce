@@ -8,7 +8,8 @@
         "lint-pyright": "pdm run pyright -p .",
         "format": "pdm run python -m isort -rc . && pdm run python -m black -t py38 .",
         "test": "pdm run python -m pytest -s --cov-report html --cov=anyforce",
-        "publish": "pdm build && pdm run python -m twine upload dist/* -u __token__ -p $PYPI_API_TOKEN",
+        "build": "pdm build",
+        "publish": "pdm run python -m twine upload dist/* -u __token__ -p $PYPI_API_TOKEN",
         "update": "pdm update",
         "lint-staged": "lint-staged"
     },
