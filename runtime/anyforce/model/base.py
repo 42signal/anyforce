@@ -41,6 +41,19 @@ class BaseModel(Model):
         return self.detail().from_orm(self).dict()
 
     @classmethod
+    async def update_or_create(
+        cls,
+        defaults: Optional[Dict[str, Any]] = None,
+        using_db: Optional[BaseDBAsyncClient] = None,
+        **kwargs: Any,
+    ):
+        return (
+            await super().update_or_create(  # pyright: ignore[reportUnknownMemberType]
+                defaults=defaults, using_db=using_db, **kwargs
+            )
+        )
+
+    @classmethod
     def list_exclude(cls) -> Optional[Tuple[str, ...]]:
         return getattr(cls.PydanticMeta, "list_exclude", None)
 
