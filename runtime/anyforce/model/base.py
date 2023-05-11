@@ -20,7 +20,7 @@ from .patch import patch_pydantic
 
 class BaseModel(Model):
     id: int = fields.IntField(pk=True)
-    created_at: datetime = LocalDatetimeField(null=False, auto_now_add=True)
+    created_at: datetime = LocalDatetimeField(null=False, auto_now_add=True, index=True)
 
     class Meta:
         abstract = True
@@ -267,7 +267,7 @@ class BaseModel(Model):
 
 
 class BaseUpdateModel(BaseModel):
-    updated_at: datetime = LocalDatetimeField(null=False, auto_now=True)
+    updated_at: datetime = LocalDatetimeField(null=False, auto_now=True, index=True)
 
     class Meta:
         abstract = True
