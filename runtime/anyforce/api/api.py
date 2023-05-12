@@ -298,6 +298,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         )
         return q, kv_q
 
+    async def watchdog(self, actions: Union[str, List[str]]):
+        return
+
     def bind(self, router: APIRouter):
         list_exclude: Set[str] = set(self.model.list_exclude() or [])
         ListPydanticModel = self.model.list()
@@ -334,6 +337,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 prefetch: List[str] = self.prefetch_query(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
+                await self.watchdog(f"{self.model.__name__}:create")
+
                 async with in_transaction(self.connection_name):
                     is_batch = isinstance(input, list)
                     inputs = cast(List[CreateForm], input if is_batch else [input])
@@ -361,6 +366,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             returns.append(obj)
                         else:
                             returns.append(DetailPydanticModel.from_orm(obj))
+
                     return returns if is_batch else returns[0]
 
             methods["create"] = create
@@ -432,6 +438,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 group_by: List[str] = self.group_by_query(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
+                await self.watchdog(f"{self.model.__name__}:list")
+
                 q = self.model.all()
                 q = self.q(current_user, request, q, ResourceMethod.list)
 
@@ -508,6 +516,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 prefetch: List[str] = self.prefetch_query(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
+                await self.watchdog(f"{self.model.__name__}:detail")
+
                 id = await self.translate_id(current_user, id, request)
                 q = self.q(
                     current_user,
@@ -515,6 +525,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     self.model.all().filter(id=id),
                     ResourceMethod.get,
                 )
+
                 obj = await q.first()
                 if not obj:
                     raise HTTPNotFoundError
@@ -539,6 +550,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 prefetch: List[str] = self.prefetch_query(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
+                await self.watchdog(f"{self.model.__name__}:update")
+
                 async with in_transaction(self.connection_name):
                     rtns: List[Any] = []
                     for obj in await self.get(
@@ -604,6 +617,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 ids: str = self.ids_path(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Union[List[DeleteResponse], DeleteResponse]:
+                await self.watchdog(f"{self.model.__name__}:delete")
+
                 async with in_transaction(self.connection_name):
                     rs: List[DeleteResponse] = []
                     for obj in await self.get(
