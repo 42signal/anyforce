@@ -156,7 +156,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             es.append(e)
         return es
 
-    def q(
+    async def q(
         self,
         user: UserModel,
         request: Request,
@@ -242,19 +242,19 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         normalize_ids = await asyncio.gather(
             *[self.translate_id(user, id.strip(), request) for id in ids.split(",")]
         )
-        objs = await self.q(
+        objs = await (await self.q(
             user,
             request,
             self.model.filter(id__in=normalize_ids),
             method,
-        ).all()
+        )).all()
         if len(objs) != len(normalize_ids):
             raise HTTPNotFoundError
         return objs
 
     async def translate_kv_condition(
         self, user: UserModel, request: Request, q: QuerySet[Model], kv: Dict[str, Any]
-    ):
+    ) -> tuple[QuerySet[Model], Q]:
         join_infos: Dict[str, Tuple[str, bool]] = {
             ".and": (Q.AND, False),
             ".or": (Q.OR, False),
@@ -447,7 +447,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
                 q = self.model.all()
-                q = self.q(current_user, request, q, ResourceMethod.list)
+                q = await self.q(current_user, request, q, ResourceMethod.list)
 
                 # 通用过滤方案
                 # https://tortoise-orm.readthedocs.io/en/latest/query.html
@@ -525,7 +525,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
                 id = await self.translate_id(current_user, id, request)
-                q = self.q(
+                q = await self.q(
                     current_user,
                     request,
                     self.model.all().filter(id=id),

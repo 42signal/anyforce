@@ -872,8 +872,10 @@ requires_python = ">=3.7"
 summary = "Backport of pathlib-compatible object wrapper for zip files"
 
 [metadata]
-lock_version = "4.1"
-content_hash = "sha256:73a8b5b0b035f69658ceece88f456e773e797f4bf1c84190ef0faec2343631e8"
+lock_version = "4.2"
+cross_platform = true
+groups = ["default", "dev"]
+content_hash = "sha256:71dbf0b1b987bf1a09ac8bcda9f3ca8189830d1402a107183d9fe9f2f48a5594"
 
 [metadata.files]
 "aenum 3.1.11" = [
