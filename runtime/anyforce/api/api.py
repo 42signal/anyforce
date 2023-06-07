@@ -109,8 +109,6 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         fields_map: Dict[str, Field[Any]] = getattr(model_meta, "fields_map")
         field_names: Iterable[str] = include or fields_map.keys()
         annotates: Dict[str, Union[Function, Term]] = {}
-        orders: List[str] = []
-
         for field_name in field_names:
             if field_name in group_by:
                 continue
@@ -123,14 +121,12 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             annotates[group_by_name] = annotate
 
             # order_by
-            for o in order_by:
+            for i, o in enumerate(order_by):
                 if o == field_name or o == f"-{field_name}":
-                    order_by.remove(o)
-                    orders.append(o.replace(field_name, group_by_name))
+                    order_by[i] = o.replace(field_name, group_by_name)
 
         q = q.annotate(**annotates)
         q = q.group_by(*group_by)
-        q = q.order_by(*orders)
         return q
 
     async def grouping(
@@ -141,10 +137,16 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         group_by: List[str],
         order_by: List[str] = [],
     ) -> List[Model]:
-        group_by_q = self.group_by(user, q, include, group_by, order_by)
-        dicts = await group_by_q.values(
-            *set(group_by).union(getattr(group_by_q, "_annotations").keys())
+        return await self.grouping_q(
+            self.group_by(user, q, include, group_by, order_by), group_by
         )
+
+    async def grouping_q(
+        self,
+        q: QuerySet[Model],
+        group_by: List[str],
+    ) -> List[Model]:
+        dicts = await q.values(*set(group_by).union(getattr(q, "_annotations").keys()))
         es: List[Model] = []
         for dic in dicts:
             e = self.model()
@@ -242,12 +244,14 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         normalize_ids = await asyncio.gather(
             *[self.translate_id(user, id.strip(), request) for id in ids.split(",")]
         )
-        objs = await (await self.q(
-            user,
-            request,
-            self.model.filter(id__in=normalize_ids),
-            method,
-        )).all()
+        objs = await (
+            await self.q(
+                user,
+                request,
+                self.model.filter(id__in=normalize_ids),
+                method,
+            )
+        ).all()
         if len(objs) != len(normalize_ids):
             raise HTTPNotFoundError
         return objs
@@ -487,12 +491,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
                 q = q.offset(offset).limit(limit)
                 if group_by:
-                    objs = await self.grouping(
-                        current_user, q, include, group_by, order_by
-                    )
-                else:
-                    objs = await q
-
+                    q = self.group_by(current_user, q, include, group_by, order_by)
                 if order_by:
                     orderings: List[str] = []
                     for item in order_by:
@@ -500,6 +499,11 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             current_user, item, request
                         )
                     q = q.order_by(*orderings)
+
+                if group_by:
+                    objs = await self.grouping_q(q, group_by)
+                else:
+                    objs = await q
 
                 if prefetch:
                     for obj in objs:
