@@ -358,13 +358,14 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
                     returns: List[PydanticBaseModel] = []
                     for input in inputs:
-                        raw, m2ms = self.model.process(input)
+                        raw, computed, m2ms = self.model.process(input)
                         obj = self.model(**raw)
 
                         obj = await self.before_create(
                             current_user, obj, input, request
                         )
                         await obj.save()
+                        await obj.update_computed(computed)
                         await obj.save_m2ms(m2ms)
                         if prefetch:
                             await obj.fetch_related(*prefetch)

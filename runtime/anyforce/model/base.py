@@ -152,6 +152,13 @@ class BaseModel(Model):
             input if isinstance(input, dict) else input.dict(exclude_unset=True)
         )
 
+        # 处理计算量
+        computed: Dict[str, Any] = {}
+        for field in cls.FormPydanticMeta.computed:
+            if field not in dic:
+                continue
+            computed[field] = dic.pop(field)
+
         # 处理 m2m
         m2ms: Dict[str, Any] = {}
         for m2m_field in cls._meta.m2m_fields:
@@ -160,10 +167,24 @@ class BaseModel(Model):
                 continue
             m2ms[m2m_field] = values
 
-        return dic, m2ms
+        return dic, computed, m2ms
+
+    async def update_computed(self, computed: Dict[str, Any]):
+        # 处理计算量
+        for field, v in computed.items():
+            setter = getattr(self, f"set_{field}", None)
+            if setter is None:
+                continue
+            if inspect.iscoroutinefunction(setter):
+                await setter(v)
+            else:
+                setter(v)
 
     async def update(self, input: Any):
-        dic, m2ms = self.process(input)
+        dic, computed, m2ms = self.process(input)
+
+        # 处理计算量
+        await self.update_computed(computed)
         self.update_from_dict(dic)  # type: ignore
         await self.save_m2ms(m2ms)
 
