@@ -19,7 +19,16 @@ from typing import (
     cast,
 )
 
-from fastapi import APIRouter, Body, Depends, Path, Query, Request, status
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    status,
+)
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import create_model
@@ -324,7 +333,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         UpdateForm = self.update_form
 
         DetailPydanticModels = Union[
-            List[DetailPydanticModel], DetailPydanticModel  # type: ignore
+            List[Any], DetailPydanticModel
         ]
         Response = create_model(
             f"{self.model.__module__}.{self.model.__name__}.Response",
@@ -350,36 +359,42 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     CreateForm
                 ),
                 prefetch: List[str] = self.prefetch_query(),
+                allow_partial: bool = False,
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
                 async with in_transaction(self.connection_name):
                     is_batch = isinstance(input, list)
                     inputs = cast(List[CreateForm], input if is_batch else [input])
 
-                    returns: List[PydanticBaseModel] = []
+                    returns: List[Any] = []
                     for input in inputs:
-                        raw, computed, m2ms = self.model.process(input)
-                        obj = self.model(**raw)
+                        try:
+                            raw, computed, m2ms = self.model.process(input)
+                            obj = self.model(**raw)
 
-                        obj = await self.before_create(
-                            current_user, obj, input, request
-                        )
-                        await obj.save()
-                        await obj.update_computed(computed)
-                        await obj.save_m2ms(m2ms)
-                        if prefetch:
-                            await obj.fetch_related(*prefetch)
+                            obj = await self.before_create(
+                                current_user, obj, input, request
+                            )
+                            await obj.save()
+                            await obj.update_computed(computed)
+                            await obj.save_m2ms(m2ms)
+                            if prefetch:
+                                await obj.fetch_related(*prefetch)
 
-                        obj_rtn = await self.after_create(
-                            current_user, obj, input, request
-                        )
-                        if obj_rtn:
-                            obj = obj_rtn
+                            obj_rtn = await self.after_create(
+                                current_user, obj, input, request
+                            )
+                            if obj_rtn:
+                                obj = obj_rtn
 
-                        if isinstance(obj, PydanticBaseModel):
-                            returns.append(obj)
-                        else:
-                            returns.append(DetailPydanticModel.from_orm(obj))
+                            if isinstance(obj, PydanticBaseModel):
+                                returns.append(obj)
+                            else:
+                                returns.append(DetailPydanticModel.from_orm(obj))
+                        except HTTPException as e:
+                            if len(inputs) <= 1 or not allow_partial:
+                                raise e
+                            returns.append(e)
                     return returns if is_batch else returns[0]
 
             methods["create"] = create
@@ -558,58 +573,67 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 ids: str = self.ids_path(),
                 input: UpdateForm = self.get_form_type(UpdateForm),
                 prefetch: List[str] = self.prefetch_query(),
+                allow_partial: bool = False,
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
                 async with in_transaction(self.connection_name):
-                    rtns: List[Any] = []
-                    for obj in await self.get(
+                    returns: List[Any] = []
+                    objs = await self.get(
                         ids, current_user, request, ResourceMethod.put
-                    ):
-                        r = await self.before_update(current_user, obj, input, request)
-                        if r:
-                            obj = r
-                            raw = input.dict(exclude_unset=True)
-
-                            updated_at = raw.pop("updated_at", None)
-                            if updated_at:
-                                # 防止老数据修改
-                                if isinstance(updated_at, str):
-                                    updated_at = json.parse_iso_datetime(updated_at)
-                                if isinstance(updated_at, datetime):
-                                    obj_updated_at: Optional[datetime] = getattr(
-                                        obj, "updated_at", None
-                                    )
-                                    if obj_updated_at:
-                                        obj_updated_at = obj_updated_at.replace(
-                                            microsecond=int(
-                                                str(obj_updated_at.microsecond)[:3]
-                                            )
-                                        )
-                                        if obj_updated_at > updated_at:
-                                            raise HTTPPreconditionRequiredError
-
-                            obj_obj = copy(obj)
-
-                            update_fields = raw.keys()
-                            if update_fields:
-                                await obj.update(raw)
-                                await obj.save(update_fields=update_fields)
-
-                            if prefetch:
-                                await obj.fetch_related(*prefetch)
-
-                            obj_rtn = await self.after_update(
-                                current_user, obj_obj, input, obj, request
+                    )
+                    for obj in objs:
+                        try:
+                            r = await self.before_update(
+                                current_user, obj, input, request
                             )
-                            if obj_rtn:
-                                obj = obj_rtn
+                            if r:
+                                obj = r
+                                raw = input.dict(exclude_unset=True)
 
-                        rtns.append(
-                            obj
-                            if isinstance(obj, PydanticBaseModel)
-                            else DetailPydanticModel.from_orm(obj)
-                        )
-                    return rtns if len(rtns) > 1 else rtns[0]
+                                updated_at = raw.pop("updated_at", None)
+                                if updated_at:
+                                    # 防止老数据修改
+                                    if isinstance(updated_at, str):
+                                        updated_at = json.parse_iso_datetime(updated_at)
+                                    if isinstance(updated_at, datetime):
+                                        obj_updated_at: Optional[datetime] = getattr(
+                                            obj, "updated_at", None
+                                        )
+                                        if obj_updated_at:
+                                            obj_updated_at = obj_updated_at.replace(
+                                                microsecond=int(
+                                                    str(obj_updated_at.microsecond)[:3]
+                                                )
+                                            )
+                                            if obj_updated_at > updated_at:
+                                                raise HTTPPreconditionRequiredError
+
+                                obj_obj = copy(obj)
+
+                                update_fields = raw.keys()
+                                if update_fields:
+                                    await obj.update(raw)
+                                    await obj.save(update_fields=update_fields)
+
+                                if prefetch:
+                                    await obj.fetch_related(*prefetch)
+
+                                obj_rtn = await self.after_update(
+                                    current_user, obj_obj, input, obj, request
+                                )
+                                if obj_rtn:
+                                    obj = obj_rtn
+
+                            returns.append(
+                                obj
+                                if isinstance(obj, PydanticBaseModel)
+                                else DetailPydanticModel.from_orm(obj)
+                            )
+                        except HTTPException as e:
+                            if len(objs) <= 1 or not allow_partial:
+                                raise e
+                            returns.append(e)
+                    return returns if len(returns) > 1 else returns[0]
 
             methods["update"] = update
 
