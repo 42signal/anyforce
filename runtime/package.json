@@ -10,7 +10,7 @@
         "test": "pdm run python -m pytest -s --cov-report html --cov=anyforce",
         "build": "pdm build",
         "publish": "pdm run python -m twine upload dist/* -u __token__ -p $PYPI_API_TOKEN",
-        "update": "pdm update",
+        "update": "pdm update --update-eager -G :all --no-self --save-exact --unconstrained",
         "lint-staged": "lint-staged"
     },
     "lint-staged": {
@@ -20,6 +20,6 @@
         ]
     },
     "devDependencies": {
-        "pyright": "1.1.270"
+        "pyright": "1.1.318"
     }
 }

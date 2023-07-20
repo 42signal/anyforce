@@ -49,7 +49,7 @@ def request(
     params: Optional[Dict[str, Any]] = None,
     headers: Optional[Dict[str, Any]] = None,
     json: Optional[Any] = None,
-    allow_redirects: bool = True,
+    follow_redirects: bool = True,
     *args: Any,
     **kwargs: Any,
 ) -> Response:
@@ -61,7 +61,7 @@ def request(
         headers=headers,
         params=params,
         json=json,
-        allow_redirects=allow_redirects,
+        follow_redirects=follow_redirects,
         *args,
         **kwargs,
     )

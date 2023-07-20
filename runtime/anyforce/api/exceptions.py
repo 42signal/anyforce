@@ -1,8 +1,8 @@
 import re
-from typing import Any, List, Match, Optional, Tuple, Union
+from typing import Any, Dict, List, Match, Optional, Tuple, Union, cast
 
 from fastapi import FastAPI, HTTPException, Request, status
-from fastapi.exceptions import RequestValidationError
+from fastapi.exceptions import RequestValidationError, ValidationException
 from fastapi.responses import ORJSONResponse
 from pydantic import (
     AnyStrMaxLengthError,
@@ -38,17 +38,52 @@ HTTPPreconditionRequiredError = HTTPException(
 ValidateError = Union[RequestValidationError, ErrorWrapper, ValidationError]
 
 
+def translate_validation_exception(e: ValidationException) -> List[str]:
+    msgs: List[str] = []
+    for child_e in e.errors():
+        log = logger.with_field(e=child_e, raw_error_type=type(child_e))
+        if isinstance(child_e, ValidationError):
+            msgs += translate_validation_error(child_e)
+        elif isinstance(child_e, dict):
+            child_e = cast(Dict[str, Any], child_e)
+            msg = child_e.get("msg", str(child_e))
+            error_type: str = child_e.get("type", "")
+            loc: Tuple[str, ...] = child_e.get("loc", ())[1:]
+            path = ".".join(list(loc))
+            if error_type == "value_error.missing":
+                msgs.append(f"{path} 是必填项")
+            elif error_type == "value_error.any_str.max_length":
+                msgs.append(f"{path} 过长")
+            elif error_type == "type_error.list":
+                msgs.append(f"{path} 不是有效的数组")
+            elif error_type == "type_error.integer":
+                msgs.append(f"{path} 不是有效的整数")
+            elif error_type == "value_error.email":
+                msgs.append(f"{path} 不是有效的 Email")
+            elif error_type == "json_invalid":
+                msgs.append(f"{path} 不是有效 JSON")
+            elif error_type.startswith("value_error.url"):
+                msgs.append(f"{path} 不是有效的链接")
+            else:
+                msgs.append(msg)
+                log.warn("not translate")
+        else:
+            msgs.append(str(child_e))
+            log.warn("not translate")
+    return msgs
+
+
 def translate_validation_error(e: ValidationError) -> List[str]:
     msgs: List[str] = []
-    model: Any = getattr(e, "model")
-    raw_errors: List[Any] = getattr(e, "raw_errors")
+    model: Any = e.model
+    raw_errors = e.raw_errors
     for raw_error in raw_errors:
         log = logger.with_field(raw_error=raw_error, raw_error_type=type(raw_error))
         if isinstance(raw_error, ErrorWrapper):
             inner_exc = getattr(raw_error, "exc")
 
             if isinstance(inner_exc, ValidationError):
-                msgs = msgs + translate_validation_error(inner_exc)
+                msgs += translate_validation_error(inner_exc)
                 continue
 
             translated_msg = ""
@@ -65,7 +100,7 @@ def translate_validation_error(e: ValidationError) -> List[str]:
             elif isinstance(inner_exc, ListError):
                 continue
             else:
-                # TODO: tranlstate more if needed
+                # TODO: translate more if needed
                 log.with_field(
                     inner_exc=inner_exc, inner_exc_type=type(inner_exc)
                 ).warn("not translate")
@@ -126,6 +161,14 @@ def translate_orm_error(
 
 
 def handlers():
+    async def validationExceptionHandle(
+        request: Optional[Request], exc: ValidationException
+    ) -> ORJSONResponse:
+        return ORJSONResponse(
+            {"detail": {"errors": translate_validation_exception(exc)}},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
     async def validationErrorHandle(
         request: Optional[Request], exc: ValidationError
     ) -> ORJSONResponse:
@@ -155,6 +198,7 @@ def handlers():
         ([RequestValidationError, ValidationError], validationErrorHandle),
         ([exceptions.BaseORMException], ormException),
         ([EnumMissingError], enumMissingErrorHandle),
+        ([RequestValidationError], validationExceptionHandle),
     )
 
 

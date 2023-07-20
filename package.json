@@ -1,6 +1,10 @@
 {
     "name": "root",
     "private": true,
+    "workspaces": [
+      "runtime",
+      "packages/*"
+    ],
     "scripts": {
       "dev": "lerna run dev --parallel",
       "lint": "lerna run lint --parallel",
@@ -9,14 +13,14 @@
       "build": "lerna run build --parallel",
       "publish": "lerna run publish",
       "update": "lerna run update --parallel",
-      "postinstall": "husky install && lerna bootstrap --ignore-scripts && lerna run prepare --parallel"
+      "postinstall": "husky install && lerna run prepare --parallel"
     },
     "devDependencies": {
-      "ansi-regex": ">=5.0.1",
-      "concurrently": "^7.0.0",
-      "husky": "^7.0.4",
-      "lerna": "^4.0.0",
-      "lint-staged": "^12.1.5"
+      "ansi-regex": "6.0.1",
+      "concurrently": "8.2.0",
+      "husky": "8.0.3",
+      "lerna": "7.1.4",
+      "lint-staged": "13.2.3"
     }
   }
   

@@ -58,12 +58,12 @@ def patch_pydantic(
                             continue
 
                     if is_form:
-                        field_pydantic_model: Type[object] = orig_model.form(
+                        field_pydantic_model = orig_model.form(
                             from_models=from_models,
                             required_override=False,
                         )
                     else:
-                        field_pydantic_model: Type[object] = orig_model.detail(
+                        field_pydantic_model = orig_model.detail(
                             from_models=from_models,
                             required_override=required_override,
                         )

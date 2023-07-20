@@ -3,7 +3,7 @@ from datetime import datetime
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, cast
 
-from tortoise import Tortoise, fields
+from tortoise import Tortoise
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.contrib.pydantic.base import PydanticModel
 from tortoise.contrib.pydantic.creator import (
@@ -14,12 +14,12 @@ from tortoise.fields.base import Field
 from tortoise.fields.relational import ManyToManyFieldInstance
 from tortoise.models import Model
 
-from .fields import LocalDatetimeField
+from .fields import IntField, LocalDatetimeField
 from .patch import patch_pydantic
 
 
 class BaseModel(Model):
-    id: int = fields.IntField(pk=True)
+    id: int = IntField(pk=True)
     created_at: datetime = LocalDatetimeField(null=False, auto_now_add=True, index=True)
 
     class Meta:

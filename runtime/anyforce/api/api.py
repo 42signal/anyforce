@@ -50,7 +50,7 @@ class ResourceMethod(IntEnum):
 
 
 class DeleteResponse(PydanticBaseModel):
-    id: Optional[Union[str, int]]
+    id: Optional[Union[str, int]] = None
 
 
 class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
@@ -458,7 +458,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 # https://tortoise-orm.readthedocs.io/en/latest/query.html
                 if condition:
                     for raw in condition:
-                        kv = cast(Any, json.loads(raw))
+                        kv = json.loads(raw)
                         q, iq = await self.translate_kv_condition(
                             current_user, request, q, kv
                         )
@@ -585,6 +585,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                                                 str(obj_updated_at.microsecond)[:3]
                                             )
                                         )
+                                        assert obj_updated_at
                                         if obj_updated_at > updated_at:
                                             raise HTTPPreconditionRequiredError
 

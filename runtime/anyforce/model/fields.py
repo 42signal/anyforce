@@ -1,7 +1,17 @@
 import math
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Awaitable, List, Literal, Optional, Type, Union
+from typing import (
+    Any,
+    Awaitable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Type,
+    Union,
+    cast,
+)
 
 from pypika import functions
 from pypika.enums import SqlTypes
@@ -16,7 +26,11 @@ from ..json import fast_dumps
 from ..json import loads as json_loads
 
 
-class LocalDatetimeField(DatetimeField):
+def IntField(pk: bool = False, **kwargs: Any):
+    return cast(Union[int, fields.IntField], fields.IntField(pk=pk, **kwargs))
+
+
+class _LocalDatetimeField(DatetimeField):
     def to_db_value(
         self, value: Optional[datetime], instance: Union[Type[Model], Model]
     ) -> Optional[datetime]:
@@ -30,12 +44,24 @@ class LocalDatetimeField(DatetimeField):
         return value
 
 
+def LocalDatetimeField(
+    auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any
+):
+    return cast(
+        Union[DatetimeField, datetime],
+        _LocalDatetimeField(auto_now=auto_now, auto_now_add=auto_now_add, **kwargs),
+    )
+
+
 def JSONField(
     encoder: JsonDumpsFunc = fast_dumps,
     decoder: JsonLoadsFunc = json_loads,
     **kwargs: Any,
 ):
-    return fields.JSONField(encoder=encoder, decoder=decoder, **kwargs)
+    return cast(
+        Union[List[Any], Dict[str, Any]],
+        fields.JSONField(encoder=encoder, decoder=decoder, **kwargs),
+    )
 
 
 class NullableCharField(fields.CharField):
@@ -199,8 +225,10 @@ class CurrencyDecimalField(fields.Field[float], float):
         return Decimal(round(value * self.multiply, self.decimal_places))
 
 
-def CharField(max_length: int, **kwargs: Any) -> Union[fields.CharField, str]:
-    return fields.CharField(max_length=max_length, **kwargs)
+def CharField(max_length: int, **kwargs: Any):
+    return cast(
+        Union[fields.CharField, str], fields.CharField(max_length=max_length, **kwargs)
+    )
 
 
 def ForeignKeyField(
@@ -229,7 +257,7 @@ def ManyToManyField(
     db_constraint: bool = True,
     **kwargs: Any,
 ) -> ManyToManyRelation[Model]:
-    return fields.ManyToManyField(  # type: ignore
+    return fields.ManyToManyField(
         model_name=model_name,
         through=through,
         forward_key=forward_key,
