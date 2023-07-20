@@ -1,9 +1,6 @@
 from typing import Optional
 
-from tortoise import fields
-
-from anyforce.model import BaseUpdateModel, StrEnum
-from anyforce.model import fields as aFields
+from anyforce.model import BaseUpdateModel, StrEnum, fields
 
 
 class CharEnum(StrEnum):
@@ -41,7 +38,7 @@ class Model2(BaseUpdateModel):
     auto_now_field = fields.DatetimeField(null=True, auto_now=True)
     auto_now_add_field = fields.DatetimeField(null=True, auto_now_add=True)
     timedelta_field = fields.TimeDeltaField(null=True)
-    json_field = aFields.JSONField(default={})
+    json_field = fields.JSONField(default={})
     binary_field = fields.BinaryField(null=True)
 
     class PydanticMeta:
