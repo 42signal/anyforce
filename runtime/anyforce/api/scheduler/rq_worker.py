@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
-from rq import Queue
+from rq import Queue, Retry
 from rq.job import Job as RQJOb
 
 from .typing import Job
@@ -11,9 +11,10 @@ from .typing import Worker as WorkerProtocol
 
 
 class Worker(object):
-    def __init__(self, queue: Queue) -> None:
+    def __init__(self, queue: Queue, retry: Optional[Retry] = None) -> None:
         super().__init__()
         self.queue = queue
+        self.retry = retry
 
     def _(self) -> WorkerProtocol:
         return self
@@ -25,7 +26,7 @@ class Worker(object):
     def enqueue_at(
         self, datetime: datetime, f: Callable[..., Any], *args: Any, **kwargs: Any
     ) -> Any:
-        return self.queue.enqueue_at(datetime, f, *args, **kwargs)
+        return self.queue.enqueue_at(datetime, f, *args, retry=self.retry, **kwargs)
 
     def list(
         self, offset: int, limit: int, condition: Optional[Dict[str, str]] = None

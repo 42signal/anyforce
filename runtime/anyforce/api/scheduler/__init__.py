@@ -8,6 +8,7 @@ from fastapi.responses import ORJSONResponse
 from fastapi.routing import APIRouter
 from pydantic import BaseModel as PydanticBaseModel
 from tortoise import Tortoise
+from tortoise.transactions import in_transaction
 
 from ...asyncio import coro
 from ...json import loads
@@ -29,10 +30,13 @@ async def update(
 ):
     logger.with_field(context=context).info("update")
     model = Tortoise.apps[app][name]
-    obj = await model.filter(**{k: v for k, v in q.items()}).get()
-    assert isinstance(obj, BaseModel)
-    await obj.update(form)
-    await obj.save()
+    async with in_transaction(app):
+        obj = (
+            await model.filter(**{k: v for k, v in q.items()}).select_for_update().get()
+        )
+        assert isinstance(obj, BaseModel)
+        await obj.update(form)
+        await obj.save(update_fields=form.keys())
 
 
 class Scheduler(object):
