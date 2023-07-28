@@ -5,7 +5,7 @@ from typing import Any, Callable
 import uvloop
 
 
-def coro(f: Callable[..., Any]) -> Callable[..., Any]:
+def run(f: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(f)
     def wrapper(*args: Any, **kwargs: Any):
         uvloop.install()

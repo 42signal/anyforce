@@ -10,7 +10,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from tortoise import Tortoise
 from tortoise.transactions import in_transaction
 
-from ...asyncio import coro
+from ...coro import run
 from ...json import loads
 from ...logging import getLogger
 from ...model import BaseModel
@@ -20,7 +20,7 @@ from .typing import Response, Worker
 logger = getLogger(__name__)
 
 
-@coro
+@run
 async def update(
     app: str,
     name: str,
