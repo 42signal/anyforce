@@ -1,7 +1,8 @@
+import asyncio
 from typing import Any, Dict, List, Type, cast
 from weakref import WeakKeyDictionary
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -23,6 +24,7 @@ def create_app(
     max_age: int = 14 * 24 * 60 * 60,
     same_site: str = "lax",
     https_only: bool = True,
+    shutdown_delay_in_seconds: int = 15,
 ):
     app = FastAPI()
     app.add_middleware(RawContextMiddleware)
@@ -48,8 +50,17 @@ def create_app(
         add_exception_handlers=False,
     )
 
+    state: List[bool] = [True]
+
+    @app.on_event("shutdown")
+    async def _():
+        state[0] = False
+        await asyncio.sleep(shutdown_delay_in_seconds)
+
     @app.get("/healthz")
     async def _() -> str:
+        if not state[0]:
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE)
         return ""
 
     return app
