@@ -21,6 +21,7 @@ class Job(BaseModel):
     args: List[Any] = Field(default_factory=list)
     kwargs: Dict[str, Any] = Field(default_factory=dict)
     context: Dict[str, str] = Field(default_factory=dict)
+    explain_func: str = ""
     explain_lines: List[Tuple[str, List[Tuple[str, Any]]]] = Field(default_factory=list)
     result: Any = ""
 
