@@ -8,6 +8,8 @@ class Job:
     func: Optional[Callable[..., Any]]
     args: List[Any]
     kwargs: Dict[str, Any]
+    result_ttl: Optional[int]
+    ttl: Optional[int]
     is_finished: bool
     is_failed: bool
     is_canceled: bool

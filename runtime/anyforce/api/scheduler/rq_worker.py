@@ -1,9 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import reduce
 from typing import Any, Callable, Dict, List, Optional
 
 from rq import Queue
+from rq.defaults import DEFAULT_RESULT_TTL
 from rq.job import Job as RQJOb
+from rq.registry import ScheduledJobRegistry
 
 from .typing import Job
 from .typing import JobStatus as Status
@@ -80,11 +82,17 @@ class Worker(object):
                         status = Status.failed
                     elif job.is_canceled or job.is_stopped:
                         status = Status.canceled
+
+                    at = (
+                        registry.get_expiration_time(job)
+                        .replace(tzinfo=timezone.utc)
+                        .astimezone()
+                    )
+                    if not isinstance(registry, ScheduledJobRegistry):
+                        at -= timedelta(seconds=job.result_ttl or DEFAULT_RESULT_TTL)
                     translated_job = Job(
                         id=job.id,
-                        at=registry.get_expiration_time(job)
-                        .replace(tzinfo=timezone.utc)
-                        .astimezone(),
+                        at=at,
                         func=job.func,
                         status=status,
                         args=job.args,
