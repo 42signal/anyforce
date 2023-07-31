@@ -1,5 +1,14 @@
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Protocol,
+    Tuple,
+)
 
 from pydantic import BaseModel, Field
 
@@ -39,7 +48,7 @@ class Worker(Protocol):
 
     def list(
         self, offset: int, limit: int, condition: Optional[Dict[str, str]]
-    ) -> Response:
+    ) -> Awaitable[Response]:
         raise NotImplementedError()
 
     def cancel(self, id: str) -> Any:

@@ -22,7 +22,7 @@ class Worker(object):
     def registry(self):
         return self.queue.scheduled_job_registry
 
-    def explain_job(self, job: Job) -> Job:
+    async def explain_job(self, job: Job) -> Job:
         return job
 
     def enqueue_at(
@@ -30,13 +30,15 @@ class Worker(object):
     ) -> Any:
         return self.queue.enqueue_at(datetime, f, *args, **kwargs)
 
-    def list(
+    async def list(
         self, offset: int, limit: int, condition: Optional[Dict[str, str]] = None
     ) -> Response:
-        jobs = self.list_jobs(offset, limit, condition)
+        jobs = await self.list_jobs(offset, limit, condition)
         return Response(data=jobs, total=self.registry.count)
 
-    def list_jobs(self, offset: int, limit: int, condition: Optional[Dict[str, str]]):
+    async def list_jobs(
+        self, offset: int, limit: int, condition: Optional[Dict[str, str]]
+    ):
         jobs: List[Job] = []
         while True:
             job_ids = self.registry.get_job_ids(-(offset + limit), limit)
@@ -70,7 +72,7 @@ class Worker(object):
                     status = Status.canceled
 
                 jobs.append(
-                    self.explain_job(
+                    await self.explain_job(
                         Job(
                             id=job.id,
                             at=self.registry.get_scheduled_time(job.id),

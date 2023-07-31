@@ -57,7 +57,7 @@ class Scheduler(object):
         depend: Callable[..., Union[Coroutine[Any, Any, Any], Any]],
     ):
         @router.get("/", response_class=ORJSONResponse)
-        def list(
+        async def list(
             offset: int = Query(0, title="分页偏移"),
             limit: int = Query(20, title="分页限额"),
             condition: str = Query(
@@ -65,7 +65,7 @@ class Scheduler(object):
             ),
             _: Any = Depends(depend),
         ) -> Response:
-            return self.worker.list(
+            return await self.worker.list(
                 offset, limit, cast(Dict[str, str], loads(condition))
             )
 
