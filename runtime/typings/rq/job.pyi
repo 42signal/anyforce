@@ -5,6 +5,7 @@ class Retry:
 
 class Job:
     id: str
+    meta: Dict[str, Any]
     func: Optional[Callable[..., Any]]
     args: List[Any]
     kwargs: Dict[str, Any]

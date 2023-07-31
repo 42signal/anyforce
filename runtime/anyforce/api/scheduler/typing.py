@@ -8,11 +8,23 @@ from typing import (
     Optional,
     Protocol,
     Tuple,
+    TypeVar,
 )
 
 from pydantic import BaseModel, Field
 
 from ...model.enum import StrEnum
+
+T = TypeVar("T")
+
+
+def formatter(title: str, formatter: Callable[..., List[Tuple[str, Any]]]):
+    def wrapper(f: Callable[..., T]) -> Callable[..., T]:
+        setattr(f, "title", title)
+        setattr(f, "formatter", formatter)
+        return f
+
+    return wrapper
 
 
 class JobStatus(StrEnum):
@@ -25,8 +37,9 @@ class JobStatus(StrEnum):
 class Job(BaseModel):
     id: str
     at: datetime
-    func: Optional[Callable[..., Any]]
     status: JobStatus = JobStatus.pending
+    func: Optional[Callable[..., Any]] = Field(exclude=True)
+    meta: Dict[str, Any] = Field(default_factory=dict)
     args: List[Any] = Field(default_factory=list)
     kwargs: Dict[str, Any] = Field(default_factory=dict)
     explain_func: str = ""

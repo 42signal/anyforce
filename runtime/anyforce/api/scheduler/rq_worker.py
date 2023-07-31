@@ -93,8 +93,9 @@ class Worker(object):
                     translated_job = Job(
                         id=job.id,
                         at=at,
-                        func=job.func,
                         status=status,
+                        meta=job.meta,
+                        func=job.func,
                         args=job.args,
                         kwargs=job.kwargs,
                         exc_info=job.exc_info,
