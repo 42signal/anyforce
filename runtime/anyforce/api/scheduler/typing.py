@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Protocol
+from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,7 @@ class Job(BaseModel):
     args: List[Any] = Field(default_factory=list)
     kwargs: Dict[str, Any] = Field(default_factory=dict)
     context: Dict[str, str] = Field(default_factory=dict)
-    explain_args: Dict[str, str] = Field(default_factory=dict)
+    explain_lines: List[List[Tuple[str, Any]]] = Field(default_factory=list)
     result: Any = ""
 
 
