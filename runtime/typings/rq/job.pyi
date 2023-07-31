@@ -1,10 +1,11 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 class Retry:
     def __init__(self, max: int, interval: Union[int, List[int]] = ...) -> None: ...
 
 class Job:
     id: str
+    func: Optional[Callable[..., Any]]
     args: List[Any]
     kwargs: Dict[str, Any]
     is_finished: bool

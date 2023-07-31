@@ -23,6 +23,9 @@ class Worker(object):
     def registry(self):
         return self.queue.scheduled_job_registry
 
+    def explain_job(self, job: Job) -> Job:
+        return job
+
     def enqueue_at(
         self, datetime: datetime, f: Callable[..., Any], *args: Any, **kwargs: Any
     ) -> Any:
@@ -68,14 +71,17 @@ class Worker(object):
                     status = Status.canceled
 
                 jobs.append(
-                    Job(
-                        id=job.id,
-                        at=self.registry.get_scheduled_time(job.id),
-                        status=status,
-                        args=job.args,
-                        kwargs=kwargs,
-                        context=context,
-                        result=str(job.result) if job.result else "",
+                    self.explain_job(
+                        Job(
+                            id=job.id,
+                            at=self.registry.get_scheduled_time(job.id),
+                            func=job.func,
+                            status=status,
+                            args=job.args,
+                            kwargs=kwargs,
+                            context=context,
+                            result=str(job.result) if job.result else "",
+                        )
                     )
                 )
                 if len(jobs) >= limit:
