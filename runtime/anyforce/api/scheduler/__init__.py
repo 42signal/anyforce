@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Union, cast
+from typing import Any, Callable, Coroutine, Dict, Optional, Union, cast
 
 from dateutil.parser import parse
 from fastapi import Path, Query, Request
@@ -23,16 +23,17 @@ logger = getLogger(__name__)
 @run
 async def update(
     app: str,
-    name: str,
+    model: str,
     q: Dict[str, Any],
     form: Dict[str, Any],
-    context: Dict[str, str],
 ):
-    logger.with_field(context=context).info("update")
-    model = Tortoise.apps[app][name]
+    logger.with_field(app=app, model=model, q=q, form=form).info("update")
+    model_cls = Tortoise.apps[app][model]
     async with in_transaction(app):
         obj = (
-            await model.filter(**{k: v for k, v in q.items()}).select_for_update().get()
+            await model_cls.filter(**{k: v for k, v in q.items()})
+            .select_for_update()
+            .get()
         )
         assert isinstance(obj, BaseModel)
         await obj.update(form)
@@ -44,12 +45,10 @@ class Scheduler(object):
         self,
         worker: Worker,
         schedule_update_at_key: str = "schedule_update_at",
-        context_query_keys: List[str] = [],
     ) -> None:
         super().__init__()
         self.worker = worker
         self.schedule_update_at_key = schedule_update_at_key
-        self.context_query_keys = context_query_keys
 
     def bind(
         self,
@@ -86,7 +85,6 @@ class Scheduler(object):
         obj: Model,
         input: PydanticBaseModel,
         request: Request,
-        context_keys: List[str] = ["name"],
     ) -> Optional[Model]:
         schedule_at = request.query_params.get(self.schedule_update_at_key)
 
@@ -104,24 +102,13 @@ class Scheduler(object):
             assert pk_v
             q = {pk_attr: pk_v}
 
-            context: Dict[str, str] = q.copy()
-            for k in context_keys:
-                v = getattr(obj, k, None)
-                if v is not None:
-                    context[k] = v
-            for k in self.context_query_keys:
-                v = request.query_params.get(k, None)
-                if v is not None:
-                    context[k] = v
-
             self.worker.enqueue_at(
                 schedule_at,
                 update,
                 app=meta.app,
-                name=obj.__class__.__name__,
+                model=obj.__class__.__name__,
                 q=q,
                 form=form,
-                context=context,
             )
             return None
         return obj

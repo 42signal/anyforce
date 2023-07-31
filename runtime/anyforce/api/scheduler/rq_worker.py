@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import reduce
 from typing import Any, Callable, Dict, List, Optional
 
 from rq import Queue
@@ -19,11 +20,29 @@ class Worker(object):
         return self
 
     @property
-    def registry(self):
-        return self.queue.scheduled_job_registry
+    def registries(self):
+        return [
+            self.queue.scheduled_job_registry,
+            self.queue.started_job_registry,
+            self.queue.finished_job_registry,
+            self.queue.failed_job_registry,
+        ]
 
-    async def explain_job(self, job: Job) -> Job:
+    async def explain(self, job: Job) -> Job:
         return job
+
+    async def filter(self, condition: Optional[Dict[str, str]], job: Job):
+        if not condition:
+            return True
+        for k, v in condition.items():
+            if not v:
+                continue
+            if k == "status" and v != job.status:
+                return False
+            vv = reduce(lambda c, ck: c.get(ck, {}), k.split("."), job.kwargs)
+            if str(vv).find(v) < 0:
+                return False
+        return True
 
     def enqueue_at(
         self, datetime: datetime, f: Callable[..., Any], *args: Any, **kwargs: Any
@@ -34,62 +53,53 @@ class Worker(object):
         self, offset: int, limit: int, condition: Optional[Dict[str, str]] = None
     ) -> Response:
         jobs = await self.list_jobs(offset, limit, condition)
-        return Response(data=jobs, total=self.registry.count)
+        return Response(
+            data=jobs, total=sum([registry.count for registry in self.registries])
+        )
 
     async def list_jobs(
         self, offset: int, limit: int, condition: Optional[Dict[str, str]]
     ):
         jobs: List[Job] = []
-        while True:
-            job_ids = self.registry.get_job_ids(-(offset + limit), limit)
-            offset += limit
-
-            rq_jobs: List[RQJOb] = RQJOb.fetch_many(
-                job_ids,
-                connection=self.queue.connection,
-                serializer=self.queue.serializer,
-            )
-            for job in rq_jobs:
-                kwargs = job.kwargs.copy()
-                context: Dict[str, str] = kwargs.pop("context", {})
-                if condition:
-                    matched = True
-                    for k, v in condition.items():
-                        if not v:
-                            continue
-                        if context.get(k, "").find(v) < 0:
-                            matched = False
-                            break
-                    if not matched:
+        for registry in self.registries:
+            job_ids = registry.get_job_ids()
+            for i in range(0, len(job_ids), limit):
+                chunk_job_ids = job_ids[i : i + limit]
+                rq_jobs: List[RQJOb] = RQJOb.fetch_many(
+                    chunk_job_ids,
+                    connection=self.queue.connection,
+                    serializer=self.queue.serializer,
+                )
+                for job in rq_jobs:
+                    status = Status.pending
+                    if job.is_finished:
+                        status = Status.finished
+                    elif job.is_failed:
+                        status = Status.failed
+                    elif job.is_canceled or job.is_stopped:
+                        status = Status.canceled
+                    translated_job = Job(
+                        id=job.id,
+                        at=registry.get_expiration_time(job),
+                        func=job.func,
+                        status=status,
+                        args=job.args,
+                        kwargs=job.kwargs,
+                        exc_info=job.exc_info,
+                        return_value=job.return_value(),
+                    )
+                    if not await self.filter(condition, translated_job):
                         continue
 
-                status = Status.pending
-                if job.is_finished:
-                    status = Status.finished
-                elif job.is_failed:
-                    status = Status.failed
-                elif job.is_canceled or job.is_stopped:
-                    status = Status.canceled
+                    offset -= 1
+                    if offset > 0:
+                        continue
 
-                jobs.append(
-                    await self.explain_job(
-                        Job(
-                            id=job.id,
-                            at=self.registry.get_scheduled_time(job.id),
-                            func=job.func,
-                            status=status,
-                            args=job.args,
-                            kwargs=kwargs,
-                            context=context,
-                            result=str(job.result) if job.result else "",
-                        )
-                    )
-                )
-                if len(jobs) >= limit:
-                    return jobs
+                    jobs.append(await self.explain(translated_job))
+                    if len(jobs) >= limit:
+                        return jobs
 
-            if len(job_ids) < limit:
-                return jobs
+        return jobs
 
     def cancel(self, id: str) -> Any:
         rq_job = RQJOb.fetch(

@@ -12,7 +12,8 @@ class Job:
     is_failed: bool
     is_canceled: bool
     is_stopped: bool
-    result: Any
+    exc_info: Optional[str]
+    def return_value(self) -> Optional[Any]: ...
     @classmethod
     def fetch(
         cls, id: str, connection: Any, serializer: Optional[Any] = ...

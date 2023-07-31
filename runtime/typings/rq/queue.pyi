@@ -2,13 +2,16 @@ from datetime import datetime, timedelta
 from typing import Any, Callable, List, Optional, Type
 
 from rq.job import Retry
-from rq.registry import ScheduledJobRegistry
+from rq.registry import BaseRegistry
 
 class Queue:
     name: str
     connection: Any
     serializer: Any
-    scheduled_job_registry: ScheduledJobRegistry
+    scheduled_job_registry: BaseRegistry
+    started_job_registry: BaseRegistry
+    finished_job_registry: BaseRegistry
+    failed_job_registry: BaseRegistry
     def __init__(
         self,
         name: str = ...,
