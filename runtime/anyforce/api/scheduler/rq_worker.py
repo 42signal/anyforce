@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import reduce
 from typing import Any, Callable, Dict, List, Optional
 
@@ -37,8 +37,10 @@ class Worker(object):
         for k, v in condition.items():
             if not v:
                 continue
-            if k == "status" and v != job.status:
-                return False
+            if k == "status":
+                if v != job.status:
+                    return False
+                continue
             vv = reduce(lambda c, ck: c.get(ck, {}), k.split("."), job.kwargs)
             if str(vv).find(v) < 0:
                 return False
@@ -80,7 +82,9 @@ class Worker(object):
                         status = Status.canceled
                     translated_job = Job(
                         id=job.id,
-                        at=registry.get_expiration_time(job),
+                        at=registry.get_expiration_time(job)
+                        .replace(tzinfo=timezone.utc)
+                        .astimezone(),
                         func=job.func,
                         status=status,
                         args=job.args,
