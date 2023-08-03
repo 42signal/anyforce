@@ -27,6 +27,14 @@ def create_app(
     shutdown_delay_in_seconds: int = 15,
 ):
     app = FastAPI()
+
+    state: List[bool] = [True]
+
+    @app.on_event("shutdown")
+    async def _():
+        state[0] = False
+        await asyncio.sleep(shutdown_delay_in_seconds)
+
     app.add_middleware(RawContextMiddleware)
     app.add_middleware(
         SessionMiddleware,
@@ -49,13 +57,6 @@ def create_app(
         generate_schemas=False,
         add_exception_handlers=False,
     )
-
-    state: List[bool] = [True]
-
-    @app.on_event("shutdown")
-    async def _():
-        state[0] = False
-        await asyncio.sleep(shutdown_delay_in_seconds)
 
     @app.get("/healthz")
     async def _() -> str:
