@@ -1,20 +1,14 @@
 import asyncio
-from typing import Any, Dict, List, Type, cast
-from weakref import WeakKeyDictionary
+from typing import Any, Dict, List
 
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette_context.middleware import RawContextMiddleware
-from tortoise.contrib.fastapi import register_tortoise  # type: ignore
+from tortoise import Tortoise
 
 from .api.exceptions import register
-
-# TODO: remove after fastapi resolve https://github.com/tiangolo/fastapi/issues/4644
-cloned_types_default: Dict[Type[BaseModel], Type[BaseModel]] = cast(
-    Dict[Type[BaseModel], Type[BaseModel]], WeakKeyDictionary()
-)
+from .model import init
 
 
 def create_app(
@@ -27,6 +21,19 @@ def create_app(
     shutdown_delay_in_seconds: int = 15,
 ):
     app = FastAPI()
+
+    state: List[bool] = [True]
+
+    @app.on_event("startup")
+    async def _():
+        await init(tortoise_config)
+
+    @app.on_event("shutdown")
+    async def _():
+        state[0] = False
+        await asyncio.sleep(shutdown_delay_in_seconds)
+        await Tortoise.close_connections()
+
     app.add_middleware(RawContextMiddleware)
     app.add_middleware(
         SessionMiddleware,
@@ -43,19 +50,6 @@ def create_app(
         allow_headers=["*"],
     )
     register(app)
-    register_tortoise(
-        app,
-        config=tortoise_config,
-        generate_schemas=False,
-        add_exception_handlers=False,
-    )
-
-    state: List[bool] = [True]
-
-    @app.on_event("shutdown")
-    async def _():
-        state[0] = False
-        await asyncio.sleep(shutdown_delay_in_seconds)
 
     @app.get("/healthz")
     async def _() -> str:
