@@ -25,6 +25,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import create_model
 from pypika.terms import Term
 from tortoise.expressions import Function, Q, RawSQL
+from tortoise.fields import CharField
 from tortoise.fields.base import Field
 from tortoise.models import MetaInfo
 from tortoise.queryset import QuerySet
@@ -150,6 +151,16 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         es: List[Model] = []
         for dic in dicts:
             e = self.model()
+
+            tortoise_model_meta = getattr(e, "_meta")
+            fields_map: dict[str, Field[Any]] = (
+                getattr(tortoise_model_meta, "fields_map")
+                if tortoise_model_meta
+                else {}
+            )
+            for field_name, field in fields_map.items():
+                if isinstance(field, CharField):
+                    setattr(e, field_name, "")
             for k, v in dic.items():
                 if v is None:
                     continue
