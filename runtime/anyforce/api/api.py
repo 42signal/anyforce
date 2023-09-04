@@ -167,6 +167,13 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     ) -> QuerySet[Model]:
         return q
 
+    async def before_return(
+        self, method: ResourceMethod, objs: PydanticBaseModel | list[PydanticBaseModel]
+    ) -> PydanticBaseModel | list[PydanticBaseModel] | dict[Any, Any] | list[
+        dict[Any, Any]
+    ]:
+        return objs
+
     async def before_create(
         self,
         user: UserModel,
@@ -380,7 +387,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             returns.append(obj)
                         else:
                             returns.append(DetailPydanticModel.from_orm(obj))
-                    return returns if is_batch else returns[0]
+                    return await self.before_return(
+                        ResourceMethod.create, returns if is_batch else returns[0]
+                    )
 
             methods["create"] = create
 
@@ -512,11 +521,14 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     if summary:
                         await summary.fetch_related(*prefetch)
 
-                return Response(
-                    total=total,
-                    summary=summary and ListPydanticModel.from_orm(summary),
-                    data=[ListPydanticModel.from_orm(obj) for obj in objs],
+                summary_data = summary and await self.before_return(
+                    ResourceMethod.list, ListPydanticModel.from_orm(summary)
                 )
+                data = await self.before_return(
+                    ResourceMethod.list,
+                    [ListPydanticModel.from_orm(obj) for obj in objs],
+                )
+                return Response(total=total, summary=summary_data, data=data)
 
             @router.get(
                 "/{id}",
@@ -541,7 +553,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     raise HTTPNotFoundError
                 if prefetch:
                     await obj.fetch_related(*prefetch)
-                return DetailPydanticModel.from_orm(obj)
+                return await self.before_return(
+                    ResourceMethod.get, DetailPydanticModel.from_orm(obj)
+                )
 
             methods["index"] = index
             methods["get"] = get
@@ -610,7 +624,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             if isinstance(obj, PydanticBaseModel)
                             else DetailPydanticModel.from_orm(obj)
                         )
-                    return rtns if len(rtns) > 1 else rtns[0]
+                    return await self.before_return(
+                        ResourceMethod.put, rtns if len(rtns) > 1 else rtns[0]
+                    )
 
             methods["update"] = update
 
