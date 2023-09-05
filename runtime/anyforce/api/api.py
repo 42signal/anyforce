@@ -148,6 +148,11 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     ) -> List[Model]:
         dicts = await q.values(*set(group_by).union(getattr(q, "_annotations").keys()))
         es: List[Model] = []
+        # overwrite default value
+        kwargs: dict[str, str] = {}
+        for k, field in self.model.fields_map().items():
+            if field.default and isinstance(field.default, str):
+                kwargs[k] = ""
         for dic in dicts:
             e = self.model()
             for k, v in dic.items():
