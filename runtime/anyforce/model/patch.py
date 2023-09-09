@@ -21,7 +21,22 @@ def patch_pydantic(
     # 解决数据动态加载的问题
     model_fields: Dict[str, ModelField] = {}
     model.__config__.extra = Extra.ignore
+    if not is_form:
+        for k, field in model.__config__.fields.items():
+            if isinstance(field, dict):
+                field.pop("max_length", None)
     for k, field in model.__fields__.items():
+        if not is_form and field.field_info.max_length:
+            field.field_info.max_length = None
+            field.validators = [
+                validator
+                for validator in field.validators
+                if validator.__name__ not in ["constr_length_validator"]
+            ]
+            if getattr(field.type_, "max_length"):
+                setattr(field.type_, "max_length", None)
+            setattr(field.outer_type_, "__modify_schema__", None)
+
         config = getattr(field.type_, "__config__", None)
         if config:
             orig_model: Optional[Any] = getattr(config, "orig_model", None)
