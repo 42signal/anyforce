@@ -33,7 +33,11 @@ from tortoise.transactions import in_transaction
 from .. import json
 from ..model import BaseModel
 from ..model.query import DistinctCountQuery
-from .exceptions import HTTPNotFoundError, HTTPPreconditionRequiredError
+from .exceptions import (
+    HTTPForbiddenError,
+    HTTPNotFoundError,
+    HTTPPreconditionRequiredError,
+)
 
 UserModel = TypeVar("UserModel")
 Model = TypeVar("Model", bound=BaseModel)
@@ -163,6 +167,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             es.append(e)
         return es
 
+    async def excludes(self) -> Optional[Set[str]]:
+        return None
+
     async def q(
         self,
         user: UserModel,
@@ -170,7 +177,32 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         q: QuerySet[Model],
         method: ResourceMethod,
     ) -> QuerySet[Model]:
+        excludes = await self.excludes()
+        if excludes:
+            model_meta = getattr(q.model, "_meta")
+            fields_db_projection: Dict[str, Any] = (
+                getattr(model_meta, "fields_db_projection") if model_meta else {}
+            )
+            include: Set[str] = (
+                set(
+                    getattr(q, "_fields_for_select", None)
+                    or fields_db_projection.keys()
+                )
+                - excludes
+            )
+            if not include:
+                raise HTTPForbiddenError
+            q = q.only(*include)
         return q
+
+    async def fetch_related(self, obj: Model, prefetch: List[str]):
+        excludes = await self.excludes()
+        if excludes:
+            exclude_prefetch = set(prefetch) - set(excludes)
+            if exclude_prefetch:
+                return
+            prefetch = list(exclude_prefetch)
+        await obj.fetch_related(*prefetch)
 
     async def before_create(
         self,
@@ -373,7 +405,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                         await obj.update_computed(computed)
                         await obj.save_m2ms(m2ms)
                         if prefetch:
-                            await obj.fetch_related(*prefetch)
+                            await self.fetch_related(obj, prefetch)
 
                         obj_rtn = await self.after_create(
                             current_user, obj, input, request
@@ -457,6 +489,13 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
                 q = self.model.all()
+
+                if not include and list_exclude:
+                    db_fields = set(self.model.fields_db_projection().keys())
+                    include = list(db_fields - list_exclude)
+                if include:
+                    q = q.only(*include)
+
                 q = await self.q(current_user, request, q, ResourceMethod.list)
 
                 # 通用过滤方案
@@ -468,13 +507,6 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             current_user, request, q, kv
                         )
                         q = q.filter(iq)
-
-                if not include and list_exclude:
-                    fields = self.model.fields_db_projection()
-                    include = list(set(fields.keys()) - list_exclude)
-
-                if include:
-                    q = q.only(*include)
 
                 summary: Optional[Model] = None
                 include_summary = self.enable_summary and include_summary
@@ -513,9 +545,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
                 if prefetch:
                     for obj in objs:
-                        await obj.fetch_related(*prefetch)
+                        await self.fetch_related(obj, prefetch)
                     if summary:
-                        await summary.fetch_related(*prefetch)
+                        await self.fetch_related(summary, prefetch)
 
                 return Response(
                     total=total,
@@ -545,7 +577,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 if not obj:
                     raise HTTPNotFoundError
                 if prefetch:
-                    await obj.fetch_related(*prefetch)
+                    await self.fetch_related(obj, prefetch)
                 return DetailPydanticModel.from_orm(obj)
 
             methods["index"] = index
@@ -602,7 +634,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                                 await obj.save(update_fields=update_fields)
 
                             if prefetch:
-                                await obj.fetch_related(*prefetch)
+                                await self.fetch_related(obj, prefetch)
 
                             obj_rtn = await self.after_update(
                                 current_user, obj_obj, input, obj, request
