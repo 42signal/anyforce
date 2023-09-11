@@ -599,13 +599,14 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             ) -> Any:
                 async with in_transaction(self.connection_name):
                     rtns: List[Any] = []
+                    excludes = await self.excludes()
                     for obj in await self.get(
                         ids, current_user, request, ResourceMethod.put
                     ):
                         r = await self.before_update(current_user, obj, input, request)
                         if r:
                             obj = r
-                            raw = input.dict(exclude_unset=True)
+                            raw = input.dict(exclude_unset=True, exclude=excludes)
 
                             updated_at = raw.pop("updated_at", None)
                             if updated_at:
