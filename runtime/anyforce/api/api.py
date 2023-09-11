@@ -91,6 +91,11 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     ) -> List[str]:
         return [self.model.normalize_field(ordering)]
 
+    def translate_group_by(
+        self, user: UserModel, groups: List[str], request: Request
+    ) -> List[str]:
+        return groups
+
     async def translate_condition(
         self, user: UserModel, q: QuerySet[Model], k: str, v: Any, request: Request
     ) -> Any:
@@ -518,6 +523,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     objs = await self.grouping(current_user, q, include, [])
                     if objs:
                         summary = objs[0]
+
+                if group_by:
+                    group_by = self.translate_group_by(current_user, group_by, request)
 
                 if group_by:
                     group_by_fields = ",".join([f"`{field}`" for field in group_by])
