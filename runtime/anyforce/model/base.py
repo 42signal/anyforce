@@ -255,6 +255,7 @@ class BaseModel(Model):
                 m = cls.get_model(f"{app}.{model_name}")
                 if m:
                     return m
+            return None
         return cast(
             Optional[Type[BaseModel]],
             Tortoise.apps.get(parts[0], {}).get(parts[1], None),
