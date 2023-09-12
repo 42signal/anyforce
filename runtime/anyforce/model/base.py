@@ -78,7 +78,7 @@ class BaseModel(Model):
     @lru_cache
     def detail(
         cls,
-        required_override: Optional[bool] = None,
+        required_override: Optional[bool] = False,
         from_models: Tuple[str, ...] = (),
     ) -> Type[PydanticModel]:
         return cls.make_pydantic(
