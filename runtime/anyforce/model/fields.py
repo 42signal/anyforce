@@ -546,7 +546,7 @@ def CharField(
 def ForeignKeyField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
-    on_delete: str = fields.NO_ACTION,
+    on_delete: str = fields.RESTRICT,
     db_constraint: bool = True,
     **kwargs: Any,
 ) -> Union[Awaitable[Model], Model]:
@@ -565,7 +565,7 @@ def ManyToManyField(
     forward_key: Optional[str] = None,
     backward_key: str = "",
     related_name: str = "",
-    on_delete: str = fields.NO_ACTION,
+    on_delete: str = fields.CASCADE,
     db_constraint: bool = True,
     **kwargs: Any,
 ) -> relational.ManyToManyRelation[Model]:
