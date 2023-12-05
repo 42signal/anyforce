@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from fastapi import Depends
+from fastapi import Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt as jwt_lib
 
@@ -15,15 +15,17 @@ def gen(
 ):
     oauth2_scheme = OAuth2PasswordBearer(tokenUrl=token_url)
 
-    async def get_current_user(
-        token: str = Depends(oauth2_scheme),
-    ) -> str:
+    async def get_current_user(request: Request) -> str:
+        token = await oauth2_scheme(request)
+        if not token:
+            raise HTTPUnAuthorizedError
         payload = jwt_lib.decode(token, secret, algorithms=[algorithm])
         user_id: str = payload.get("sub", "")
         if not user_id:
             raise HTTPUnAuthorizedError
         exp = float(payload.get("exp", 0))
-        assert exp > datetime.now().timestamp()
+        if exp < datetime.now().timestamp():
+            raise HTTPUnAuthorizedError
         return user_id
 
     def authorize(user_id: str) -> str:
