@@ -1,6 +1,7 @@
 import time
 
 from faker import Faker
+from fastapi import Request
 from jose import ExpiredSignatureError
 
 from anyforce.api.security import jwt, password_context
@@ -18,12 +19,19 @@ async def test_jwt(database: bool, faker: Faker):
     )
     get_current_user, authorize = jwt.gen("", faker.name(), expire_after_seconds=1)
     token = authorize(email)
-    authed_user = await get_current_user(token)
+
+    request = Request(
+        {
+            "type": "http",
+            "headers": [("authorization".encode(), (f"Bearer {token}").encode())],
+        }
+    )
+    authed_user = await get_current_user(request)
     assert authed_user == email
 
     time.sleep(2)
     try:
-        await get_current_user(token)
+        await get_current_user(request)
         assert False
     except ExpiredSignatureError:
         pass
