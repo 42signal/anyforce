@@ -54,6 +54,7 @@ class OAuth2(object):
                         "grant_type": "authorization_code",
                         "code": code,
                         "redirect_uri": redirect_uri,
+                        "scope": "openid",
                     }
                 ),
             ) as response:
