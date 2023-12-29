@@ -40,6 +40,7 @@ class OAuth2(object):
                 "client_id": self.client_id,
                 "response_type": "code",
                 "redirect_uri": redirect_uri,
+                "scope": "openid",
             },
         )
 
@@ -54,7 +55,6 @@ class OAuth2(object):
                         "grant_type": "authorization_code",
                         "code": code,
                         "redirect_uri": redirect_uri,
-                        "scope": "openid",
                     }
                 ),
             ) as response:
