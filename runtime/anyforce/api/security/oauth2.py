@@ -69,7 +69,11 @@ class OAuth2(object):
                 return await response.json(loads=json.loads)
 
     def bind(
-        self, router: APIRouter, wrap: bool, verify: Callable[[Request, Any, str], Any]
+        self,
+        router: APIRouter,
+        wrap: bool,
+        verify: Callable[[Request, Any, str], Any],
+        post_logout_redirect_uri: str = "",
     ):
         @router.get("/login")
         def login(request: Request, redirect_uri: str = ""):
@@ -91,4 +95,16 @@ class OAuth2(object):
             r = await verify(request, await self.userinfo(token), redirect_uri)
             return r if r else HTTPUnAuthorizedError
 
-        return login, auth
+        @router.get("/logout")
+        def logout():
+            return RedirectResponse(
+                self.join(
+                    "logout",
+                    {
+                        "client_id": self.client_id,
+                        "post_logout_redirect_uri": post_logout_redirect_uri,
+                    },
+                )
+            )
+
+        return login, auth, logout
