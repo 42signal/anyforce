@@ -100,15 +100,13 @@ class OAuth2(object):
 
         @router.get("/logout")
         def logout(request: Request):
-            return RedirectResponse(
-                self.join(
-                    "logout",
-                    {
-                        "client_id": self.client_id,
-                        "id_token_hint": request.session.get("id_token", ""),
-                        "post_logout_redirect_uri": post_logout_redirect_uri,
-                    },
-                )
-            )
+            params: Dict[str, str] = {
+                "client_id": self.client_id,
+                "post_logout_redirect_uri": post_logout_redirect_uri,
+            }
+            id_token = request.session.get("id_token", "")
+            if id_token:
+                params["id_token_hint"] = id_token
+            return RedirectResponse(self.join("logout", params))
 
         return login, auth, logout
