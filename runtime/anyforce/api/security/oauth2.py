@@ -59,7 +59,7 @@ class OAuth2(object):
                 ),
             ) as response:
                 r = await response.json(loads=json.loads)
-                return r["access_token"]
+                return r["access_token"], r["id_token"]
 
     async def userinfo(self, token: str):
         async with aiohttp.ClientSession() as session:
@@ -86,22 +86,26 @@ class OAuth2(object):
 
         @router.get("/auth")
         async def auth(request: Request, code: str, redirect_uri: str = ""):
-            token = await self.auth(
+            token, id_token = await self.auth(
                 code,
                 self.redirect_url(request, redirect_uri)
                 if not redirect_uri or wrap
                 else redirect_uri,
             )
             r = await verify(request, await self.userinfo(token), redirect_uri)
-            return r if r else HTTPUnAuthorizedError
+            if not r:
+                return HTTPUnAuthorizedError
+            request.session["id_token"] = id_token
+            return r
 
         @router.get("/logout")
-        def logout():
+        def logout(request: Request):
             return RedirectResponse(
                 self.join(
                     "logout",
                     {
                         "client_id": self.client_id,
+                        "id_token_hint": request.session.get("id_token", ""),
                         "post_logout_redirect_uri": post_logout_redirect_uri,
                     },
                 )
