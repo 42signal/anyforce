@@ -136,13 +136,13 @@ def translate_orm_error(
         status_code = status.HTTP_400_BAD_REQUEST
         args: List[str] = []
         for arg in e.args:
-            regxps = [
+            regexps = [
                 ".*Duplicate entry '(.+)' for key.*",
                 "UNIQUE constraint failed: .*",
             ]
             matched: Optional[Match[str]] = None
-            for regxp in regxps:
-                matched = re.match(regxp, str(arg))
+            for regexp in regexps:
+                matched = re.match(regexp, str(arg))
                 if matched:
                     status_code = status.HTTP_409_CONFLICT
                     groups = matched.groups()
@@ -161,6 +161,28 @@ def translate_orm_error(
 
 
 def handlers():
+    async def valueExceptionHandle(
+        request: Optional[Request], exc: ValueError
+    ) -> ORJSONResponse:
+        msg = str(exc)
+        regexps = [
+            (r"invalid literal for int\(\) with base 10: '(.+)'", "{0} 不是有效的整数"),
+            ("could not convert string to float: '(.+)'", "{0} 不是有效的浮点数"),
+        ]
+        matched: Optional[Match[str]] = None
+        for regexp, msg_template in regexps:
+            matched = re.match(regexp, msg)
+            if matched:
+                groups = matched.groups()
+                msg = msg_template.format(*groups)
+                break
+        if not matched:
+            logger.with_field(msg=msg, type=type(exc)).warn("not translate")
+        return ORJSONResponse(
+            {"detail": {"errors": msg}},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
     async def validationExceptionHandle(
         request: Optional[Request], exc: ValidationException
     ) -> ORJSONResponse:
@@ -195,6 +217,7 @@ def handlers():
         )
 
     return (
+        ([ValueError], valueExceptionHandle),
         ([RequestValidationError, ValidationError], validationErrorHandle),
         ([exceptions.BaseORMException], ormException),
         ([EnumMissingError], enumMissingErrorHandle),

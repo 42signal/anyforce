@@ -13,12 +13,12 @@ from .model import CharEnum, Model1
 async def test_exceptions(faker: Faker):
     handlers = exceptions.handlers()
 
-    validationErrorHandle = handlers[0][1]
+    validationErrorHandle = handlers[1][1]
     await validationErrorHandle(
         None, ValidationError([[RuntimeError(faker.pystr())]], Model1.detail())
     )
 
-    ormException = handlers[1][1]
+    ormException = handlers[2][1]
     await ormException(None, tortoiseExceptions.ValidationError(faker.pystr()))
     await ormException(None, tortoiseExceptions.DoesNotExist(faker.pystr()))
     await ormException(None, tortoiseExceptions.IntegrityError(faker.pystr()))
@@ -30,5 +30,5 @@ async def test_exceptions(faker: Faker):
     try:
         CharEnum("c")
     except EnumMissingError as e:
-        enumMissingErrorHandle = handlers[2][1]
+        enumMissingErrorHandle = handlers[3][1]
         await enumMissingErrorHandle(None, e)
