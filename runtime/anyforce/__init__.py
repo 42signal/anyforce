@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Sequence
 
 from fastapi import FastAPI, HTTPException, status
 from starlette.middleware.cors import CORSMiddleware
@@ -19,8 +19,10 @@ def create_app(
     same_site: str = "lax",
     https_only: bool = True,
     shutdown_delay_in_seconds: int = 15,
+    on_startup: Sequence[Callable[[], Any]] | None = None,
+    on_shutdown: Sequence[Callable[[], Any]] | None = None,
 ):
-    app = FastAPI()
+    app = FastAPI(on_startup=on_startup, on_shutdown=on_shutdown)
 
     state: List[bool] = [True]
 
