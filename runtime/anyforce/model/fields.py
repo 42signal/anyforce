@@ -329,11 +329,16 @@ class SplitCharDBField(fields.CharField, List[str]):
         separator: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
+        self.separator = separator or "\n"
+
+        d = kwargs.get("default", [])
+        if isinstance(d, list):
+            kwargs["default"] = self.separator.join(d)
+
         super().__init__(
             max_length,
             **kwargs,
         )
-        self.separator = separator
 
     def to_python_value(
         self, value: Optional[Union[str, List[str]]]
@@ -359,7 +364,7 @@ class SplitCharDBField(fields.CharField, List[str]):
             return value
 
         return super().to_db_value(
-            (self.separator or "\n").join(value) if value else "", instance
+            self.separator.join(value) if value else "", instance
         )
 
     def __bool__(self):

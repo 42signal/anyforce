@@ -209,14 +209,13 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     async def before_create(
         self,
         user: UserModel,
-        obj: Model,
         input: CreateForm,
         request: Request,
-    ) -> Model:
-        return obj
+    ) -> Any:
+        return input
 
     async def after_create(
-        self, user: UserModel, obj: Model, input: CreateForm, request: Request
+        self, user: UserModel, obj: Model, input: Any, request: Request
     ) -> Any:
         return obj
 
@@ -397,12 +396,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
                     returns: List[PydanticBaseModel] = []
                     for input in inputs:
+                        input = await self.before_create(current_user, input, request)
                         raw, computed, m2ms = self.model.process(input)
                         obj = self.model(**raw)
-
-                        obj = await self.before_create(
-                            current_user, obj, input, request
-                        )
                         await obj.save()
                         await obj.update_computed(computed)
                         await obj.save_m2ms(m2ms)
