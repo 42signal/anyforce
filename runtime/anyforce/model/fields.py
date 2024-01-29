@@ -327,13 +327,13 @@ class SplitCharDBField(fields.CharField, List[str]):
         self,
         max_length: int,
         separator: Optional[str] = None,
+        default: Optional[list[str]] = None,
         **kwargs: Any,
     ) -> None:
         self.separator = separator or "\n"
 
-        d = kwargs.get("default", [])
-        if isinstance(d, list):
-            kwargs["default"] = self.separator.join(d)
+        if default is not None:
+            kwargs["default"] = self.separator.join(default)
 
         super().__init__(
             max_length,
@@ -375,7 +375,7 @@ def SplitCharField(
     max_length: int,
     source_field: Optional[str] = None,
     null: bool = False,
-    default: Any = None,
+    default: Optional[list[str]] = None,
     index: bool = False,
     description: Optional[str] = None,
     **kwargs: Any,
