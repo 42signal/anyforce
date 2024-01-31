@@ -214,6 +214,14 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     ) -> Any:
         return input
 
+    async def before_save(
+        self,
+        user: UserModel,
+        obj: Model,
+        request: Request,
+    ) -> Model:
+        return obj
+
     async def after_create(
         self, user: UserModel, obj: Model, input: Any, request: Request
     ) -> Any:
@@ -398,7 +406,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     for input in inputs:
                         input = await self.before_create(current_user, input, request)
                         raw, computed, m2ms = self.model.process(input)
-                        obj = self.model(**raw)
+                        obj = await self.before_save(
+                            current_user, self.model(**raw), request
+                        )
                         await obj.save()
                         await obj.update_computed(computed)
                         await obj.save_m2ms(m2ms)
