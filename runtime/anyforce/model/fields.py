@@ -331,14 +331,7 @@ class SplitCharDBField(fields.CharField, List[str]):
         **kwargs: Any,
     ) -> None:
         self.separator = separator or "\n"
-
-        if default is not None:
-            kwargs["default"] = self.separator.join(default)
-
-        super().__init__(
-            max_length,
-            **kwargs,
-        )
+        super().__init__(max_length, default=default, **kwargs)
 
     def to_python_value(
         self, value: Optional[Union[str, List[str]]]
