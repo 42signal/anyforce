@@ -218,6 +218,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         self,
         user: UserModel,
         obj: Model,
+        input: Any,
         request: Request,
     ) -> Model:
         return obj
@@ -407,7 +408,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                         input = await self.before_create(current_user, input, request)
                         raw, computed, m2ms = self.model.process(input)
                         obj = await self.before_save(
-                            current_user, self.model(**raw), request
+                            current_user, self.model(**raw), input, request
                         )
                         await obj.save()
                         await obj.update_computed(computed)
