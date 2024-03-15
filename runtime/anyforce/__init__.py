@@ -1,5 +1,7 @@
 import asyncio
-from typing import Any, Callable, Dict, List, Sequence
+import inspect
+from contextlib import asynccontextmanager
+from typing import Any, Callable, Dict, List, Literal, Sequence
 
 from fastapi import FastAPI, HTTPException, status
 from starlette.middleware.cors import CORSMiddleware
@@ -16,25 +18,31 @@ def create_app(
     allow_origins: List[str],
     tortoise_config: Dict[str, Any],
     max_age: int = 14 * 24 * 60 * 60,
-    same_site: str = "lax",
+    same_site: Literal["lax", "strict", "none"] = "lax",
     https_only: bool = True,
     shutdown_delay_in_seconds: int = 15,
-    on_startup: Sequence[Callable[[], Any]] | None = None,
-    on_shutdown: Sequence[Callable[[], Any]] | None = None,
+    on_startup: Sequence[Callable[[], Any]] = [],
+    on_shutdown: Sequence[Callable[[], Any]] = [],
 ):
-    app = FastAPI(on_startup=on_startup, on_shutdown=on_shutdown)
-
-    state: List[bool] = [True]
-
-    @app.on_event("startup")
-    async def _():
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
         await init(tortoise_config)
-
-    @app.on_event("shutdown")
-    async def _():
+        for c in on_startup:
+            cr = c()
+            if inspect.isawaitable(cr):
+                await cr
+        yield
         state[0] = False
         await asyncio.sleep(shutdown_delay_in_seconds)
         await Tortoise.close_connections()
+        for c in on_shutdown:
+            cr = c()
+            if inspect.isawaitable(cr):
+                await cr
+
+    app = FastAPI(lifespan=lifespan)
+
+    state: List[bool] = [True]
 
     app.add_middleware(RawContextMiddleware)
     app.add_middleware(

@@ -18,9 +18,9 @@ from ...model.enum import StrEnum
 T = TypeVar("T")
 
 
-def formatter(title: str, formatter: Callable[..., List[Tuple[str, Any]]]):
+def formatter(label: str, formatter: Callable[..., List[Tuple[str, Any]]]):
     def wrapper(f: Callable[..., T]) -> Callable[..., T]:
-        setattr(f, "title", title)
+        setattr(f, "label", label)
         setattr(f, "formatter", formatter)
         return f
 

@@ -487,7 +487,7 @@ class CurrencyDecimalField(fields.Field[float], float):
 
     @property
     def SQL_TYPE(self) -> str:  # type: ignore
-        return f"DECIMAL({self.max_digits},{self.decimal_places})"
+        return f"DECIMAL({self.max_digits}, {self.decimal_places})"
 
     class _db_sqlite:
         SQL_TYPE = "VARCHAR(40)"

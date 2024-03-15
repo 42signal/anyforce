@@ -22,7 +22,7 @@ from typing import (
 from fastapi import APIRouter, Body, Depends, Path, Query, Request, status
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import create_model
+from pydantic import create_model  # type: ignore
 from pypika.terms import Term
 from tortoise.expressions import Function, Q, RawSQL
 from tortoise.fields.base import Field

@@ -48,8 +48,8 @@ def translate_validation_exception(e: ValidationException) -> List[str]:
             child_e = cast(Dict[str, Any], child_e)
             msg = child_e.get("msg", str(child_e))
             error_type: str = child_e.get("type", "")
-            loc: Tuple[str, ...] = child_e.get("loc", ())[1:]
-            path = ".".join(list(loc))
+            loc: Tuple[str, ...] = child_e.get("loc") or ()
+            path = ".".join(list(loc)[1:])
             if error_type == "value_error.missing":
                 msgs.append(f"{path} 是必填项")
             elif error_type == "value_error.any_str.max_length":

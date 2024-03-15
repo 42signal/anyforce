@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from enum import Enum
 from enum import IntEnum as StdlibIntEnum
+from enum import StrEnum as StdlibStrEnum
 from typing import Any, Callable, Optional, Tuple
 
 
@@ -14,18 +14,18 @@ class EnumMissingError(Exception):
     @staticmethod
     def missing(enum_type: Any, value: Any):
         meta: Optional[Callable[[], Any]] = getattr(enum_type, "meta", None)
-        title: str = getattr(meta(), "title", "") if meta else ""
-        return EnumMissingError(enum_type, value, f"{title} 不存在枚举值 {value}")
+        label: str = getattr(meta(), "label", "") if meta else ""
+        return EnumMissingError(enum_type, value, f"{label} 不存在枚举值 {value}")
 
 
 class IntEnum(StdlibIntEnum):
-    title: str
+    label: str
     args: Tuple[str, ...]
 
-    def __new__(cls, value: int, title: str = "", *args: str):
+    def __new__(cls, value: int, label: str = "", *args: str):
         obj = int.__new__(cls, value)
         obj._value_ = value
-        obj.title = title
+        obj.label = label
         obj.args = args
         return obj
 
@@ -34,14 +34,14 @@ class IntEnum(StdlibIntEnum):
         raise EnumMissingError.missing(cls, value)
 
 
-class StrEnum(str, Enum):
-    title: str  # type: ignore
+class StrEnum(StdlibStrEnum):
+    label: str
     args: Tuple[str, ...]
 
-    def __new__(cls, value: str, title: str = "", *args: str):
+    def __new__(cls, value: str, label: str = "", *args: str):
         obj = str.__new__(cls, value)
         obj._value_ = value
-        obj.title = title
+        obj.label = label
         obj.args = args
         return obj
 

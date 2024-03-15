@@ -141,7 +141,7 @@ def patch_pydantic(
                     continue
             new_obj[k] = v
 
-        m = model.__new__(model)
+        m = model()
         values, fields_set, validation_error = validate_model(model, new_obj)
         if validation_error:
             raise validation_error
