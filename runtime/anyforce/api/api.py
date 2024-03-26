@@ -643,6 +643,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             update_fields = raw.keys()
                             if update_fields:
                                 await obj.update(raw)
+                                obj = await self.before_save(
+                                    current_user, obj, raw, request
+                                )
                                 await obj.save(update_fields=update_fields)
 
                             if prefetch:
