@@ -200,10 +200,10 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     ):
         excludes = await self.excludes(method)
         if excludes:
-            exclude_prefetch = set(prefetch) - set(excludes)
-            if exclude_prefetch:
+            include_prefetch = set(prefetch) - set(excludes)
+            if not include_prefetch:
                 return
-            prefetch = list(exclude_prefetch)
+            prefetch = list(include_prefetch)
         await obj.fetch_related(*prefetch)
 
     async def before_create(
