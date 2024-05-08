@@ -7,17 +7,26 @@ from pydantic.fields import SHAPE_LIST, SHAPE_SINGLETON, ModelField
 from tortoise import fields
 from tortoise.contrib.pydantic.base import PydanticModel
 from tortoise.exceptions import NoValuesFetched
+from tortoise.fields import DatetimeField
+from tortoise.fields.base import Field
 from tortoise.fields.relational import NoneAwaitable
+from tortoise.models import Model
 from tortoise.queryset import AwaitableQuery
 
 
 def patch_pydantic(
+    cls: type[Model],
     model: Type[PydanticModel],
     from_models: Tuple[str, ...] = (),
     required_override: Optional[bool] = None,
     is_form: bool = False,
     max_recursion: int = 1,
 ) -> Type[PydanticModel]:
+    model_meta = getattr(cls, "_meta")
+    fields_map: Dict[str, Field[Any]] = (
+        getattr(model_meta, "fields_map") if model_meta else {}
+    )
+
     # 解决数据动态加载的问题
     model_fields: Dict[str, ModelField] = {}
     model.__config__.extra = Extra.ignore
@@ -113,11 +122,16 @@ def patch_pydantic(
         if not field.required:
             continue
 
+        db_field = fields_map.get(k)
+        if db_field and isinstance(db_field, DatetimeField):
+            if db_field.auto_now or db_field.auto_now_add:
+                field.required = False
+                continue
+
         try:
             field.required = not issubclass(field.type_, PydanticModel)
         except TypeError:
             pass
-
     model.__fields__ = model_fields
 
     def from_orm(obj: Any) -> PydanticModel:

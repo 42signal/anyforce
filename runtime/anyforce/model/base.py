@@ -133,6 +133,7 @@ class BaseModel(Model):
         meta = cls.FormPydanticMeta if is_form else cls.PydanticMeta
         in_max_recursion = getattr(meta, "max_recursion", 0)
         return patch_pydantic(
+            cls,
             pydantic_model_creator(
                 cls,
                 name=".".join(parts),
