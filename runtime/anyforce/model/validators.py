@@ -6,6 +6,6 @@ from tortoise.exceptions import ValidationError
 
 def email(value: Any):
     try:
-        validate_email(str(value))
+        validate_email(str(value), check_deliverability=False)
     except EmailNotValidError:
         raise ValidationError(f"{value} 不是有效的邮箱地址")
