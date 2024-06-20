@@ -4,16 +4,7 @@ from typing import Any, Dict, List, Match, Optional, Tuple, Union, cast
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError, ValidationException
 from fastapi.responses import ORJSONResponse
-from pydantic import (
-    AnyStrMaxLengthError,
-    EmailError,
-    IntegerError,
-    ListError,
-    MissingError,
-    UrlError,
-    ValidationError,
-)
-from pydantic.error_wrappers import ErrorWrapper
+from pydantic import ValidationError
 from tortoise import exceptions
 
 from ..logging import getLogger
@@ -35,9 +26,6 @@ HTTPPreconditionRequiredError = HTTPException(
 )
 
 
-ValidateError = Union[RequestValidationError, ErrorWrapper, ValidationError]
-
-
 def translate_validation_exception(e: ValidationException) -> List[str]:
     msgs: List[str] = []
     for child_e in e.errors():
@@ -50,72 +38,43 @@ def translate_validation_exception(e: ValidationException) -> List[str]:
             error_type: str = child_e.get("type", "")
             loc: Tuple[str, ...] = child_e.get("loc") or ()
             path = ".".join(list(loc)[1:])
-            if error_type == "value_error.missing":
-                msgs.append(f"{path} 是必填项")
-            elif error_type == "value_error.any_str.max_length":
-                msgs.append(f"{path} 过长")
-            elif error_type == "type_error.list":
-                msgs.append(f"{path} 不是有效的数组")
-            elif error_type == "type_error.integer":
-                msgs.append(f"{path} 不是有效的整数")
-            elif error_type == "value_error.email":
-                msgs.append(f"{path} 不是有效的 Email")
-            elif error_type == "json_invalid":
-                msgs.append(f"{path} 不是有效 JSON")
-            elif error_type.startswith("value_error.url"):
-                msgs.append(f"{path} 不是有效的链接")
-            else:
-                msgs.append(msg)
+
+            translated_msg = validation_error_translation.get(error_type)
+            if not translated_msg:
                 log.warn("not translate")
+                translated_msg = msg
+            msgs.append(f"{path} {translated_msg}")
+
         else:
             msgs.append(str(child_e))
             log.warn("not translate")
     return msgs
 
 
+validation_error_translation: dict[str, str] = {
+    "missing": "必填写项目",
+    "int_parsing": "为无效数据",
+    "url_parsing": "为无效的链接",
+    "string_too_long": "数据过长",
+    "string_too_short": "数据过短",
+}
+
+
 def translate_validation_error(e: ValidationError) -> List[str]:
     msgs: List[str] = []
-    model: Any = e.model
-    raw_errors = e.raw_errors
-    for raw_error in raw_errors:
-        log = logger.with_field(raw_error=raw_error, raw_error_type=type(raw_error))
-        if isinstance(raw_error, ErrorWrapper):
-            inner_exc = getattr(raw_error, "exc")
+    for error in e.errors():
+        typ: str = error["type"]
+        msg: str = error["msg"]
+        loc: List[str] = [str(x) for x in error["loc"]]
 
-            if isinstance(inner_exc, ValidationError):
-                msgs += translate_validation_error(inner_exc)
-                continue
-
-            translated_msg = ""
-            if isinstance(inner_exc, MissingError):
-                translated_msg = "是必填项"
-            elif isinstance(inner_exc, IntegerError):
-                translated_msg = "为无效的整数"
-            elif isinstance(inner_exc, EmailError):
-                translated_msg = "为无效的邮箱地址"
-            elif isinstance(inner_exc, UrlError):
-                translated_msg = "为无效的链接"
-            elif isinstance(inner_exc, AnyStrMaxLengthError):
-                translated_msg = "数据过长"
-            elif isinstance(inner_exc, ListError):
-                continue
-            else:
-                # TODO: translate more if needed
-                log.with_field(
-                    inner_exc=inner_exc, inner_exc_type=type(inner_exc)
-                ).warn("not translate")
-
-            if translated_msg:
-                for loc in raw_error.loc_tuple():
-                    property = model.schema().get("properties", {}).get(loc, {})
-                    title: str = (
-                        property.get("description") or property.get("title") or str(loc)
-                    )
-                    msgs.append(f"{title} {translated_msg}")
-                continue
-        else:
+        log = logger.with_field(raw_error=error, raw_error_type=typ)
+        translated_msg = validation_error_translation.get(typ)
+        if not translated_msg:
             log.warn("not translate")
-        msgs.append(str(raw_error))
+            translated_msg = msg
+
+        path = ".".join(list(loc)[1:])
+        msgs.append(f"{path} {translated_msg}")
     return msgs
 
 

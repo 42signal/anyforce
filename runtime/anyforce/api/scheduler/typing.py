@@ -38,7 +38,7 @@ class Job(BaseModel):
     id: str
     at: datetime
     status: JobStatus = JobStatus.pending
-    func: Optional[Callable[..., Any]] = Field(exclude=True)
+    func: Optional[Callable[..., Any]] = Field(None, exclude=True)
     meta: Dict[str, Any] = Field(default_factory=dict)
     args: List[Any] = Field(default_factory=list)
     kwargs: Dict[str, Any] = Field(default_factory=dict)

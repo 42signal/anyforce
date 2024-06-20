@@ -376,7 +376,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         Response = create_model(
             f"{self.model.__module__}.{self.model.__name__}.Response",
             __base__=PydanticBaseModel,
-            total=0,
+            total=(int, 0),
             summary=(Optional[ListPydanticModel], ...),  # type: ignore
             data=(List[ListPydanticModel], ...),  # type: ignore
         )
@@ -427,7 +427,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                         if isinstance(obj, PydanticBaseModel):
                             returns.append(obj)
                         else:
-                            returns.append(DetailPydanticModel.from_orm(obj))
+                            returns.append(DetailPydanticModel.model_validate(obj))
                     return returns if is_batch else returns[0]
 
             methods["create"] = create
@@ -482,7 +482,13 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 ```
             """
 
-            @router.get("/", response_model=Response, response_class=ORJSONResponse)
+            @router.get(
+                "/",
+                response_model=Response,
+                response_class=ORJSONResponse,
+                response_model_exclude_unset=True,
+                response_model_exclude_none=True,
+            )
             async def index(
                 request: Request,
                 offset: int = Query(0, title="分页偏移"),
@@ -562,8 +568,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
                 return Response(
                     total=total,
-                    summary=summary and ListPydanticModel.from_orm(summary),
-                    data=[ListPydanticModel.from_orm(obj) for obj in objs],
+                    summary=summary and ListPydanticModel.model_validate(summary),
+                    data=[ListPydanticModel.model_validate(obj) for obj in objs],
                 )
 
             @router.get(
@@ -589,7 +595,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     raise HTTPNotFoundError
                 if prefetch:
                     await self.fetch_related(obj, ResourceMethod.get, prefetch)
-                return DetailPydanticModel.from_orm(obj)
+                return DetailPydanticModel.model_validate(obj)
 
             methods["index"] = index
             methods["get"] = get
@@ -617,7 +623,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                         r = await self.before_update(current_user, obj, input, request)
                         if r:
                             obj = r
-                            raw = input.dict(exclude_unset=True, exclude=excludes)
+                            raw = input.model_dump(exclude_unset=True, exclude=excludes)
 
                             updated_at = raw.pop("updated_at", None)
                             if updated_at:
@@ -662,7 +668,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                         rtns.append(
                             obj
                             if isinstance(obj, PydanticBaseModel)
-                            else DetailPydanticModel.from_orm(obj)
+                            else DetailPydanticModel.model_validate(obj)
                         )
                     return rtns if len(rtns) > 1 else rtns[0]
 

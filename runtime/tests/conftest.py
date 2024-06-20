@@ -23,8 +23,8 @@ def router(app: FastAPI):
     class CreateForm(Model2.form()):
         text_field: AnyUrl
 
-    class UpdateForm(Model2.detail(required_override=False)):
-        text_field: Optional[EmailStr]
+    class UpdateForm(Model2.form(required_override=False)):
+        text_field: Optional[EmailStr] = None
 
     class API(PublicAPI[Model2, CreateForm, UpdateForm]):
         def __init__(self) -> None:
@@ -35,7 +35,7 @@ def router(app: FastAPI):
         ) -> Any:
             obj = await super().after_create(user, obj, input, request)
             if obj.id == 1:
-                return Model2.detail().from_orm(obj)
+                return Model2.detail().model_validate(obj)
 
         async def after_update(
             self,
@@ -47,7 +47,7 @@ def router(app: FastAPI):
         ) -> Any:
             obj = await super().after_update(user, old_obj, input, obj, request)
             if obj.id == 1:
-                return Model2.detail().from_orm(obj)
+                return Model2.detail().model_validate(obj)
 
         async def before_delete(self, user: str, obj: Model2, request: Request) -> Any:
             obj = await super().before_delete(user, obj, request)
