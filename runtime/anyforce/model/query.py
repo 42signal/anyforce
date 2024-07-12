@@ -6,7 +6,7 @@ from tortoise.queryset import CountQuery
 class DistinctCountQuery(CountQuery):
     def __init__(self, q: CountQuery) -> None:
         super().__init__(
-            q.model,
+            q.model,  # type: ignore
             q._db,
             q.q_objects,
             q.annotations,
@@ -19,9 +19,13 @@ class DistinctCountQuery(CountQuery):
 
     def _make_query(self) -> None:
         super()._make_query()
-        meta = getattr(self.model, "_meta")
         setattr(
             self.query,
             "_selects",
-            [getattr(Count(F("id", table=meta.basetable)), "distinct")()],
+            [
+                getattr(
+                    Count(F("id", table=self.model._meta.basetable)),  # type: ignore
+                    "distinct",
+                )()
+            ],
         )

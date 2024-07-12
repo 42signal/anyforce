@@ -93,7 +93,7 @@ class Scheduler(object):
             assert isinstance(schedule_at, datetime)
             schedule_at = schedule_at.astimezone()
 
-            form = input.dict(exclude_unset=True)
+            form = input.model_dump(exclude_unset=True)
             assert form
 
             meta = obj.__class__._meta  # type: ignore

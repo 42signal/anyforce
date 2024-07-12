@@ -14,9 +14,10 @@ async def test_exceptions(faker: Faker):
     handlers = exceptions.handlers()
 
     validationErrorHandle = handlers[1][1]
-    await validationErrorHandle(
-        None, ValidationError([[RuntimeError(faker.pystr())]], Model1.detail())
-    )
+    try:
+        Model1.detail().model_validate({})
+    except ValidationError as e:
+        await validationErrorHandle(None, e)
 
     ormException = handlers[2][1]
     await ormException(None, tortoiseExceptions.ValidationError(faker.pystr()))

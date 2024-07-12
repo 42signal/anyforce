@@ -38,7 +38,7 @@ class BaseModel(Model):
     async def dict(self, prefetch: Optional[List[str]] = None) -> Dict[str, Any]:
         if prefetch:
             await self.fetch_related(*prefetch)
-        return self.detail().from_orm(self).dict()
+        return self.detail().model_validate(self).model_dump()
 
     @classmethod
     async def update_or_create(
@@ -150,7 +150,7 @@ class BaseModel(Model):
     @classmethod
     def process(cls, input: Any):
         dic: Dict[str, Any] = (
-            input if isinstance(input, dict) else input.dict(exclude_unset=True)
+            input if isinstance(input, dict) else input.model_dump(exclude_unset=True)
         )
 
         # 处理计算量

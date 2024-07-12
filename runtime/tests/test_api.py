@@ -5,6 +5,7 @@ from fastapi import status
 
 from anyforce.json import fast_dumps
 from anyforce.test import TestAPI as Base
+from anyforce.test import TestConfigs
 
 
 class TestAPI(Base):
@@ -161,7 +162,7 @@ class TestAPI(Base):
 
     @pytest.fixture()
     def update_tests(self):
-        def tests():
+        def tests() -> TestConfigs:
             yield {
                 "id": 1,
                 "prefetch": ["int_field_plus_bigint_field"],
@@ -194,7 +195,7 @@ class TestAPI(Base):
 
     @pytest.fixture()
     def delete_tests(self):
-        def tests():
+        def tests() -> TestConfigs:
             yield {"id": 1}, status.HTTP_200_OK, None
 
         return tests()

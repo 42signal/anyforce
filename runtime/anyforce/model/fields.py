@@ -18,7 +18,12 @@ from pypika.enums import SqlTypes
 from pypika.terms import Term
 from tortoise import fields
 from tortoise.fields import DatetimeField, relational
-from tortoise.fields.data import JsonDumpsFunc, JsonLoadsFunc
+from tortoise.fields.base import OnDelete
+from tortoise.fields.data import (
+    DatetimeFieldQueryValueType,
+    JsonDumpsFunc,
+    JsonLoadsFunc,
+)
 from tortoise.models import Model
 
 from ..json import fast_dumps
@@ -204,11 +209,14 @@ def TextField(
 
 class _LocalDatetimeField(DatetimeField):
     def to_db_value(
-        self, value: Optional[datetime], instance: Union[Type[Model], Model]
-    ) -> Optional[datetime]:
+        self,
+        value: Optional[DatetimeFieldQueryValueType],
+        instance: Union[Type[Model], Model],
+    ) -> Optional[DatetimeFieldQueryValueType]:
         value = super().to_db_value(value, instance)
         if (
             value
+            and isinstance(value, datetime)
             and value.tzinfo is not None
             and value.tzinfo.utcoffset(value) is not None
         ):
@@ -544,7 +552,7 @@ def CharField(
 def ForeignKeyField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
-    on_delete: str = fields.RESTRICT,
+    on_delete: OnDelete = OnDelete.RESTRICT,
     db_constraint: bool = True,
     **kwargs: Any,
 ) -> Union[Awaitable[Model], Model]:
@@ -563,7 +571,7 @@ def ManyToManyField(
     forward_key: Optional[str] = None,
     backward_key: str = "",
     related_name: str = "",
-    on_delete: str = fields.CASCADE,
+    on_delete: OnDelete = OnDelete.CASCADE,
     db_constraint: bool = True,
     **kwargs: Any,
 ) -> relational.ManyToManyRelation[Model]:
