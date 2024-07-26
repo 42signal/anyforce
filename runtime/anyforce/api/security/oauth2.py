@@ -88,9 +88,11 @@ class OAuth2(object):
         async def auth(request: Request, code: str, redirect_uri: str = ""):
             token, id_token = await self.auth(
                 code,
-                self.redirect_url(request, redirect_uri)
-                if not redirect_uri or wrap
-                else redirect_uri,
+                (
+                    self.redirect_url(request, redirect_uri)
+                    if not redirect_uri or wrap
+                    else redirect_uri
+                ),
             )
             r = await verify(request, await self.userinfo(token), redirect_uri)
             if not r:

@@ -1,14 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
-
-try:
-    from ciso8601 import parse_datetime  # type: ignore
-except ImportError:
-    from dateutil.parser import parse as parse_datetime
-
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import orjson
+from dateutil.parser import parse as parse_datetime
 from fastapi.encoders import jsonable_encoder
 
 
@@ -47,7 +42,7 @@ def dumps(
 
 
 def parse_iso_datetime(s: str) -> datetime:
-    return parse_datetime(s)  # type: ignore
+    return parse_datetime(s)
 
 
 def decoder(input: Any) -> Any:

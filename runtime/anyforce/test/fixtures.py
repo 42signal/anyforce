@@ -1,4 +1,3 @@
-import asyncio
 from typing import Iterable
 
 import pytest
@@ -7,13 +6,6 @@ from fastapi.testclient import TestClient
 from tortoise import Tortoise
 
 from ..api import exceptions
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 
 async def init_tortoise(models: Iterable[str]):
@@ -35,9 +27,9 @@ def client(app: FastAPI) -> TestClient:
     return TestClient(app)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 async def database(models: Iterable[str]):
     await init_tortoise(models)
     await Tortoise.generate_schemas(False)
     yield True
-    await Tortoise._drop_databases()  # type: ignore
+    await Tortoise.close_connections()

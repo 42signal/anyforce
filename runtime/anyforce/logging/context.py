@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Dict, Optional
 
 from .level import SUCCESS
 
@@ -9,13 +9,11 @@ from .level import SUCCESS
 class Context(object):
     def __init__(
         self,
-        isEnabledFor: Callable[[int], bool],
-        log: Callable[..., Any],
+        logger: logging.Logger,
         context: Optional[Dict[str, Any]] = None,
     ) -> None:
         super(Context, self).__init__()
-        self.isEnabledFor = isEnabledFor
-        self._log = log
+        self.logger = logger
         self.context: Dict[str, Any] = context or {}
 
     def get_extras(self, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -34,7 +32,7 @@ class Context(object):
     def with_field(self, **kwargs: Any) -> Context:
         context = self.context.copy()
         context.update(kwargs)
-        return Context(isEnabledFor=self.isEnabledFor, log=self._log, context=context)
+        return Context(logger=self.logger, context=context)
 
     def debug(
         self,
@@ -44,16 +42,14 @@ class Context(object):
         extra: Optional[Dict[str, Any]] = None,
         stack_info: bool = False,
         **kwargs: Any,
-    ) -> Any:
-        if not self.isEnabledFor(logging.DEBUG):
-            return
-        return self._log(
-            logging.DEBUG,
+    ):
+        self.logger.debug(
             msg,
-            args=args,
             exc_info=exc_info,
             extra=self.get_extras(extra),
             stack_info=stack_info,
+            stacklevel=2,
+            *args,
             *kwargs,
         )
 
@@ -65,16 +61,14 @@ class Context(object):
         extra: Optional[Dict[str, Any]] = None,
         stack_info: bool = False,
         **kwargs: Any,
-    ) -> Any:
-        if not self.isEnabledFor(logging.INFO):
-            return
-        return self._log(
-            logging.INFO,
+    ):
+        self.logger.info(
             msg,
-            args=args,
             exc_info=exc_info,
             extra=self.get_extras(extra),
             stack_info=stack_info,
+            stacklevel=2,
+            *args,
             *kwargs,
         )
 
@@ -86,16 +80,14 @@ class Context(object):
         extra: Optional[Dict[str, Any]] = None,
         stack_info: bool = False,
         **kwargs: Any,
-    ) -> Any:
-        if not self.isEnabledFor(logging.WARNING):
-            return
-        return self._log(
-            logging.WARNING,
+    ):
+        self.logger.warning(
             msg,
-            args=args,
             exc_info=exc_info,
             extra=self.get_extras(extra),
             stack_info=stack_info,
+            stacklevel=2,
+            *args,
             *kwargs,
         )
 
@@ -107,16 +99,14 @@ class Context(object):
         extra: Optional[Dict[str, Any]] = None,
         stack_info: bool = False,
         **kwargs: Any,
-    ) -> Any:
-        if not self.isEnabledFor(logging.WARNING):
-            return
-        return self._log(
-            logging.WARNING,
+    ):
+        self.logger.warn(
             msg,
-            args=args,
             exc_info=exc_info,
             extra=self.get_extras(extra),
             stack_info=stack_info,
+            stacklevel=2,
+            *args,
             *kwargs,
         )
 
@@ -128,16 +118,14 @@ class Context(object):
         extra: Optional[Dict[str, Any]] = None,
         stack_info: bool = False,
         **kwargs: Any,
-    ) -> Any:
-        if not self.isEnabledFor(logging.ERROR):
-            return
-        return self._log(
-            logging.ERROR,
+    ):
+        self.logger.error(
             msg,
-            args=args,
             exc_info=exc_info,
             extra=self.get_extras(extra),
             stack_info=stack_info,
+            stacklevel=2,
+            *args,
             *kwargs,
         )
 
@@ -149,16 +137,14 @@ class Context(object):
         extra: Optional[Dict[str, Any]] = None,
         stack_info: bool = False,
         **kwargs: Any,
-    ) -> Any:
-        if not self.isEnabledFor(logging.ERROR):
-            return
-        return self._log(
-            logging.ERROR,
+    ):
+        self.logger.exception(
             msg,
-            args=args,
             exc_info=exc_info,
             extra=self.get_extras(extra),
             stack_info=stack_info,
+            stacklevel=2,
+            *args,
             *kwargs,
         )
 
@@ -170,16 +156,14 @@ class Context(object):
         extra: Optional[Dict[str, Any]] = None,
         stack_info: bool = False,
         **kwargs: Any,
-    ) -> Any:
-        if not self.isEnabledFor(logging.CRITICAL):
-            return
-        return self._log(
-            logging.CRITICAL,
+    ):
+        self.logger.critical(
             msg,
-            args=args,
             exc_info=exc_info,
             extra=self.get_extras(extra),
             stack_info=stack_info,
+            stacklevel=2,
+            *args,
             *kwargs,
         )
 
@@ -191,16 +175,15 @@ class Context(object):
         extra: Optional[Dict[str, Any]] = None,
         stack_info: bool = False,
         **kwargs: Any,
-    ) -> Any:
-        if not self.isEnabledFor(SUCCESS):
-            return
-        return self._log(
+    ):
+        self.logger.log(
             SUCCESS,
             msg,
-            args=args,
             exc_info=exc_info,
             extra=self.get_extras(extra),
             stack_info=stack_info,
+            stacklevel=2,
+            *args,
             *kwargs,
         )
 
@@ -213,20 +196,19 @@ class Context(object):
         extra: Optional[Dict[str, Any]] = None,
         stack_info: bool = False,
         **kwargs: Any,
-    ) -> Any:
-        if not self.isEnabledFor(level):
-            return
-        return self._log(
+    ):
+        self.logger.log(
             level,
             msg,
-            args=args,
             exc_info=exc_info,
             extra=self.get_extras(extra),
             stack_info=stack_info,
+            stacklevel=2,
+            *args,
             *kwargs,
         )
 
 
 class ContextLogger(logging.Logger):
     def with_field(self, **kwargs: Any) -> Context:
-        return Context(isEnabledFor=self.isEnabledFor, log=self._log, context=kwargs)
+        return Context(logger=self, context=kwargs)

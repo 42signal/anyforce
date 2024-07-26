@@ -8,6 +8,7 @@ from fastapi.responses import ORJSONResponse
 from fastapi.routing import APIRouter
 from pydantic import BaseModel as PydanticBaseModel
 from tortoise import Tortoise
+from tortoise.models import MetaInfo
 from tortoise.transactions import in_transaction
 
 from ...coro import run
@@ -93,10 +94,10 @@ class Scheduler(object):
             assert isinstance(schedule_at, datetime)
             schedule_at = schedule_at.astimezone()
 
-            form = input.dict(exclude_unset=True)
+            form = input.model_dump(exclude_unset=True)
             assert form
 
-            meta = obj.__class__._meta  # type: ignore
+            meta: MetaInfo = getattr(obj.__class__, "_meta")
             pk_attr = meta.pk_attr
             pk_v = getattr(obj, pk_attr, None)
             assert pk_v

@@ -1,19 +1,11 @@
 import re
-from typing import Any, Dict, List, Match, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union, cast
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError, ValidationException
 from fastapi.responses import ORJSONResponse
-from pydantic import (
-    AnyStrMaxLengthError,
-    EmailError,
-    IntegerError,
-    ListError,
-    MissingError,
-    UrlError,
-    ValidationError,
-)
-from pydantic.error_wrappers import ErrorWrapper
+from pydantic import ValidationError
+from pydantic_core import ErrorDetails
 from tortoise import exceptions
 
 from ..logging import getLogger
@@ -31,102 +23,133 @@ HTTPUnAuthorizedError = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED, detail={"errors": "未认证"}
 )
 HTTPPreconditionRequiredError = HTTPException(
-    status_code=status.HTTP_428_PRECONDITION_REQUIRED, detail={"errors": "请求数据已过期"}
+    status_code=status.HTTP_428_PRECONDITION_REQUIRED,
+    detail={"errors": "请求数据已过期"},
 )
 
 
-ValidateError = Union[RequestValidationError, ErrorWrapper, ValidationError]
+validation_error_translation: dict[str, str] = {
+    "bool_parsing": "无法解析为布尔值",
+    "bool_type": "不是有效的布尔值",
+    "date_from_datetime_inexact": "不完整的日期",
+    "date_from_datetime_parsing": "无法从日期时间解析出日期",
+    "date_future": "不是将来的日期",
+    "date_parsing": "无法解析日期",
+    "date_past": "不是过去的日期",
+    "date_type": "不是有效的日期",
+    "datetime_from_date_parsing": "无法从日期解析出日期时间",
+    "datetime_future": "不是将来的日期时间",
+    "datetime_object_invalid": "不是有效的日期时间对象",
+    "datetime_parsing": "无法解析为日期时间",
+    "datetime_past": "不是过去的日期时间",
+    "datetime_type": "不是有效的日期时间",
+    "decimal_max_digits": "定点数数字过多",
+    "decimal_max_places": "定点数小数部分过多",
+    "decimal_parsing": "无法解析为定点数",
+    "decimal_type": "不是有效的定点数",
+    "decimal_whole_digits": "定点数整数部分过多",
+    "dict_type": "不是有效的字典",
+    "enum": "枚举不存在",
+    "finite_number": "无穷大",
+    "float_parsing": "无法解析为浮点数",
+    "float_type": "不是有效的浮点数",
+    "get_attribute_error": "无法获取属性",
+    "greater_than": "过大",
+    "greater_than_equal": "过大或等于",
+    "int_from_float": "无法从浮点数解析为整数",
+    "int_parsing": "无法解析为整数",
+    "int_type": "不是有效的整数",
+    "invalid_key": "不是有效的键值",
+    "is_instance_of": "不是有效的类型",
+    "is_subclass_of": "不是有效的父类型",
+    "iterable_type": "不可迭代",
+    "iteration_error": "不是有效的迭代器",
+    "json_invalid": "无法解析为 JSON",
+    "json_type": "不是有效的 JSON",
+    "less_than": "过小",
+    "less_than_equal": "过小或等于",
+    "list_type": "不是有效的数组",
+    "literal_error": "不是有效的字符",
+    "mapping_type": "不是有效的映射",
+    "missing": "为必填项目",
+    "model_attributes_type": "无法获取模型属性",
+    "model_type": "不是有效的模型",
+    "multiple_of": "不是有效的倍数",
+    "no_such_attribute": "不存在该属性",
+    "none_required": "只允许 null",
+    "recursion_loop": "死循环",
+    "set_type": "不是有效的集合",
+    "string_pattern_mismatch": "不符合字符串规则",
+    "string_sub_type": "不是有效的字符类型",
+    "string_too_long": "字符串过长",
+    "string_too_short": "字符串过短",
+    "string_type": "不是有效的字符",
+    "string_unicode": "不是有效的字符编码",
+    "time_delta_parsing": "无法解析为时间间隔",
+    "time_delta_type": "不是有效的时间间隔",
+    "time_parsing": "无法解析为时间",
+    "time_type": "不是有效的时间",
+    "timezone_aware": "缺少时区",
+    "timezone_naive": "不是本地时间",
+    "too_long": "太长",
+    "too_short": "太短",
+    "tuple_type": "不是有效的元祖",
+    "url_parsing": "无法解析为链接",
+    "url_scheme": "不是有效的链接协议",
+    "url_syntax_violation": "不符合有效的链接规则",
+    "url_too_long": "链接太长",
+    "url_type": "不是有效的链接",
+    "uuid_parsing": "无法解析为 UUID",
+    "uuid_type": "不是有效的 UUID",
+    "uuid_version": "不是有效的 UUID 版本",
+    "value_error": "不是有效的值",
+}
 
 
-def translate_validation_exception(e: ValidationException) -> List[str]:
-    msgs: List[str] = []
+def translate_validation_exception(e: ValidationException):
+    msgs: Set[str] = set()
     for child_e in e.errors():
-        log = logger.with_field(e=child_e, raw_error_type=type(child_e))
         if isinstance(child_e, ValidationError):
-            msgs += translate_validation_error(child_e)
+            msgs = msgs.union(translate_validation_error(child_e))
         elif isinstance(child_e, dict):
-            child_e = cast(Dict[str, Any], child_e)
-            msg = child_e.get("msg", str(child_e))
-            error_type: str = child_e.get("type", "")
-            loc: Tuple[str, ...] = child_e.get("loc") or ()
-            path = ".".join(list(loc)[1:])
-            if error_type == "value_error.missing":
-                msgs.append(f"{path} 是必填项")
-            elif error_type == "value_error.any_str.max_length":
-                msgs.append(f"{path} 过长")
-            elif error_type == "type_error.list":
-                msgs.append(f"{path} 不是有效的数组")
-            elif error_type == "type_error.integer":
-                msgs.append(f"{path} 不是有效的整数")
-            elif error_type == "value_error.email":
-                msgs.append(f"{path} 不是有效的 Email")
-            elif error_type == "json_invalid":
-                msgs.append(f"{path} 不是有效 JSON")
-            elif error_type.startswith("value_error.url"):
-                msgs.append(f"{path} 不是有效的链接")
-            else:
-                msgs.append(msg)
-                log.warn("not translate")
+            msgs.add(translate_validation_error_detail(cast(Dict[str, Any], child_e)))
         else:
-            msgs.append(str(child_e))
-            log.warn("not translate")
+            msgs.add(str(child_e))
+            logger.with_field(e=child_e, raw_error_type=type(child_e)).warn(
+                "not translate"
+            )
+    return list(msgs)
+
+
+def translate_validation_error(e: ValidationError):
+    msgs: Set[str] = set()
+    for error in e.errors():
+        msgs.add(translate_validation_error_detail(error))
     return msgs
 
 
-def translate_validation_error(e: ValidationError) -> List[str]:
-    msgs: List[str] = []
-    model: Any = e.model
-    raw_errors = e.raw_errors
-    for raw_error in raw_errors:
-        log = logger.with_field(raw_error=raw_error, raw_error_type=type(raw_error))
-        if isinstance(raw_error, ErrorWrapper):
-            inner_exc = getattr(raw_error, "exc")
+def translate_validation_error_detail(e: dict[str, Any] | ErrorDetails):
+    typ: str = e.get("type", "")
+    msg: str = e.get("msg", "")
+    value = e["input"] or ""
+    path = ".".join([str(x) for x in e.get("loc", [])])
 
-            if isinstance(inner_exc, ValidationError):
-                msgs += translate_validation_error(inner_exc)
-                continue
+    translate_msg = validation_error_translation.get(typ)
+    if not translate_msg:
+        logger.with_field(raw_error=e, raw_error_type=type(e), msg=msg).info(
+            "translate exception"
+        )
+    msg = translate_msg or msg
 
-            translated_msg = ""
-            if isinstance(inner_exc, MissingError):
-                translated_msg = "是必填项"
-            elif isinstance(inner_exc, IntegerError):
-                translated_msg = "为无效的整数"
-            elif isinstance(inner_exc, EmailError):
-                translated_msg = "为无效的邮箱地址"
-            elif isinstance(inner_exc, UrlError):
-                translated_msg = "为无效的链接"
-            elif isinstance(inner_exc, AnyStrMaxLengthError):
-                translated_msg = "数据过长"
-            elif isinstance(inner_exc, ListError):
-                continue
-            else:
-                # TODO: translate more if needed
-                log.with_field(
-                    inner_exc=inner_exc, inner_exc_type=type(inner_exc)
-                ).warn("not translate")
-
-            if translated_msg:
-                for loc in raw_error.loc_tuple():
-                    property = model.schema().get("properties", {}).get(loc, {})
-                    title: str = (
-                        property.get("description") or property.get("title") or str(loc)
-                    )
-                    msgs.append(f"{title} {translated_msg}")
-                continue
-        else:
-            log.warn("not translate")
-        msgs.append(str(raw_error))
-    return msgs
+    return f"{value} {msg}: {path}"
 
 
-def translate_validate_error(
-    e: Union[ValidationError, List[ValidationError]]
-) -> List[str]:
-    msgs: List[str] = []
+def translate_validate_error(e: Union[ValidationError, List[ValidationError]]):
+    msgs: Set[str] = set()
     errors: List[Any] = e if isinstance(e, List) else [e]
     for error in errors:
-        msgs += translate_validation_error(error)
-    return msgs
+        msgs = msgs.union(translate_validation_error(error))
+    return list(msgs)
 
 
 def translate_orm_error(
@@ -228,4 +251,4 @@ def handlers():
 def register(app: FastAPI):
     for errors, handler in handlers():
         for e in errors:
-            app.exception_handler(e)(handler)  # type: ignore
+            app.exception_handler(e)(handler)

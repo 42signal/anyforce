@@ -25,10 +25,8 @@ jobs:
           key: ${{ runner.os }}-pdm-${{ hashFiles('**/pdm.lock') }}
           restore-keys: |
             ${{ runner.os }}-pdm-
-      - uses: actions/setup-node@v3
-        with:
-          node-version: "16"
-      - run: npm ci
-      - run: npm run build
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install
+      - run: pnpm run -r build
+      - run: PYPI_API_TOKEN=${{ secrets.PYPI_API_TOKEN }} pnpm run -r publish
       - run: cd runtime && pdm run python -m twine upload --repository-url ${{ secrets.NEXUS_URL }} dist/* --username ${{ secrets.NEXUS_USERNAME }} --password ${{ secrets.NEXUS_PASSWORD }}
-      - run: PYPI_API_TOKEN=${{ secrets.PYPI_API_TOKEN }} npm run publish

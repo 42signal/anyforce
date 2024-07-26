@@ -26,7 +26,7 @@ class TestAPI:
     def faker(self) -> Faker:
         return Faker()
 
-    def test_create(
+    async def test_create(
         self,
         client: TestClient,
         database: bool,
@@ -48,7 +48,7 @@ class TestAPI:
             if callback:
                 callback(json, obj)
 
-    def test_list(
+    async def test_list(
         self,
         client: TestClient,
         database: bool,
@@ -59,7 +59,7 @@ class TestAPI:
         assert router
         assert database
         for params, status_code, callback in list_tests:
-            r = get(client, endpoint, params=params)
+            r = get(client, f"{endpoint}/", params=params)
             self.log_request(params, status_code, r)
 
             r = r.json_object()
@@ -88,7 +88,7 @@ class TestAPI:
             if callback:
                 callback(params, r)
 
-    def test_get(
+    async def test_get(
         self,
         client: TestClient,
         database: bool,
@@ -111,7 +111,7 @@ class TestAPI:
             if status_code < 300:
                 self.assert_obj(obj)
 
-                # validate preftch
+                # validate prefetch
                 prefetch: Any = params.get("prefetch", [])
                 prefetch = prefetch if isinstance(prefetch, list) else [prefetch]
                 for k in prefetch:
@@ -120,7 +120,7 @@ class TestAPI:
             if callback:
                 callback(params, obj)
 
-    def test_update(
+    async def test_update(
         self,
         client: TestClient,
         database: bool,
@@ -149,7 +149,7 @@ class TestAPI:
             if callback:
                 callback(params, obj)
 
-    def test_delete(
+    async def test_delete(
         self,
         client: TestClient,
         database: bool,
@@ -178,11 +178,10 @@ class TestAPI:
 
     @staticmethod
     def log_request(input: Any, status_code: int, r: Any):
-        if r.status_code != status_code:
-            logging.info(
-                f"expect: {status_code}, request: {input} -> [{r.status_code}]{r.text}"
-            )
-            breakpoint()
+        logging.info(
+            f"expect: {status_code}, request: {input} -> [{r.status_code}]{r.text}",
+            stack_info=True,
+        )
         assert r.status_code == status_code
 
     @staticmethod

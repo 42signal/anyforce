@@ -20,7 +20,9 @@ CRITICAL = logging.CRITICAL
 os.environ["PYCHARM_HOSTED"] = "true"
 colorama.init()
 logging.addLevelName(SUCCESS, "SUCCESS")
-log_level = logging.getLevelName(os.environ.get("LOGLEVEL", "INFO").upper())
+log_level = logging.getLevelNamesMapping().get(
+    os.environ.get("LOGLEVEL", "INFO").upper(), logging.INFO
+)
 logging.getLogger().setLevel(log_level)
 
 colorful_log_handler = logging.StreamHandler()

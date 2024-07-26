@@ -22,7 +22,7 @@ from typing import (
 from fastapi import APIRouter, Body, Depends, Path, Query, Request, status
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import create_model  # type: ignore
+from pydantic import create_model
 from pypika.terms import Term
 from tortoise.expressions import Function, Q, RawSQL
 from tortoise.fields.base import Field
@@ -283,7 +283,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
     @property
     def connection_name(self):
-        return self.model._meta.default_connection  # type: ignore
+        meta: MetaInfo = getattr(self.model, "_meta")
+        return meta.default_connection
 
     async def get(
         self, ids: str, user: UserModel, request: Request, method: ResourceMethod
@@ -364,21 +365,19 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         return q, kv_q
 
     def bind(self, router: APIRouter):
-        list_exclude: Set[str] = set(self.model.list_exclude() or [])
+        list_exclude: Set[str] = set(self.model.PydanticMeta.list_exclude or [])
         ListPydanticModel = self.model.list()
         DetailPydanticModel = self.model.detail()
         CreateForm = self.create_form
         UpdateForm = self.update_form
 
-        DetailPydanticModels = Union[
-            List[DetailPydanticModel], DetailPydanticModel  # type: ignore
-        ]
+        DetailPydanticModels = Union[List[DetailPydanticModel], DetailPydanticModel]
         Response = create_model(
             f"{self.model.__module__}.{self.model.__name__}.Response",
             __base__=PydanticBaseModel,
-            total=0,
-            summary=(Optional[ListPydanticModel], ...),  # type: ignore
-            data=(List[ListPydanticModel], ...),  # type: ignore
+            total=(int, 0),
+            summary=(Optional[ListPydanticModel], ...),
+            data=(List[ListPydanticModel], ...),
         )
 
         methods: Dict[str, Callable[..., Any]] = {}
@@ -390,6 +389,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 response_model=DetailPydanticModels,
                 response_class=ORJSONResponse,
                 status_code=status.HTTP_201_CREATED,
+                response_model_exclude_unset=True,
+                response_model_exclude_none=True,
             )
             async def create(
                 request: Request,
@@ -421,13 +422,14 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                         obj_rtn = await self.after_create(
                             current_user, obj, input, request
                         )
+
                         if obj_rtn:
                             obj = obj_rtn
 
                         if isinstance(obj, PydanticBaseModel):
                             returns.append(obj)
                         else:
-                            returns.append(DetailPydanticModel.from_orm(obj))
+                            returns.append(DetailPydanticModel.model_validate(obj))
                     return returns if is_batch else returns[0]
 
             methods["create"] = create
@@ -482,7 +484,13 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 ```
             """
 
-            @router.get("/", response_model=Response, response_class=ORJSONResponse)
+            @router.get(
+                "/",
+                response_model=Response,
+                response_class=ORJSONResponse,
+                response_model_exclude_unset=True,
+                response_model_exclude_none=True,
+            )
             async def index(
                 request: Request,
                 offset: int = Query(0, title="分页偏移"),
@@ -562,14 +570,16 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
                 return Response(
                     total=total,
-                    summary=summary and ListPydanticModel.from_orm(summary),
-                    data=[ListPydanticModel.from_orm(obj) for obj in objs],
+                    summary=summary and ListPydanticModel.model_validate(summary),
+                    data=[ListPydanticModel.model_validate(obj) for obj in objs],
                 )
 
             @router.get(
                 "/{id}",
                 response_model=DetailPydanticModel,
                 response_class=ORJSONResponse,
+                response_model_exclude_unset=True,
+                response_model_exclude_none=True,
             )
             async def get(
                 request: Request,
@@ -589,7 +599,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     raise HTTPNotFoundError
                 if prefetch:
                     await self.fetch_related(obj, ResourceMethod.get, prefetch)
-                return DetailPydanticModel.from_orm(obj)
+                return DetailPydanticModel.model_validate(obj)
 
             methods["index"] = index
             methods["get"] = get
@@ -600,6 +610,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 "/{ids}",
                 response_model=DetailPydanticModels,
                 response_class=ORJSONResponse,
+                response_model_exclude_unset=True,
+                response_model_exclude_none=True,
             )
             async def update(
                 request: Request,
@@ -609,7 +621,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
                 async with in_transaction(self.connection_name):
-                    rtns: List[Any] = []
+                    returns: List[Any] = []
                     excludes = await self.excludes(ResourceMethod.put)
                     for obj in await self.get(
                         ids, current_user, request, ResourceMethod.put
@@ -617,7 +629,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                         r = await self.before_update(current_user, obj, input, request)
                         if r:
                             obj = r
-                            raw = input.dict(exclude_unset=True, exclude=excludes)
+                            raw = input.model_dump(exclude_unset=True, exclude=excludes)
 
                             updated_at = raw.pop("updated_at", None)
                             if updated_at:
@@ -659,12 +671,12 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             if obj_rtn:
                                 obj = obj_rtn
 
-                        rtns.append(
+                        returns.append(
                             obj
                             if isinstance(obj, PydanticBaseModel)
-                            else DetailPydanticModel.from_orm(obj)
+                            else DetailPydanticModel.model_validate(obj)
                         )
-                    return rtns if len(rtns) > 1 else rtns[0]
+                    return returns if len(returns) > 1 else returns[0]
 
             methods["update"] = update
 
@@ -674,6 +686,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 "/{ids}",
                 response_model=Union[List[DeleteResponse], DeleteResponse],
                 response_class=ORJSONResponse,
+                response_model_exclude_unset=True,
+                response_model_exclude_none=True,
             )
             async def delete(
                 request: Request,

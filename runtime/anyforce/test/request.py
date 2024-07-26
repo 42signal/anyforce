@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional, Union
 
 import httpx
 from fastapi.testclient import TestClient
-from requests.utils import dict_from_cookiejar  # type: ignore
 
 from ..json import raw_dumps
 
@@ -17,10 +16,6 @@ class Response(object):
         return self.r.content
 
     @property
-    def cookies(self) -> Dict[str, str]:
-        return dict_from_cookiejar(self.r.cookies)  # type: ignore
-
-    @property
     def text(self) -> str:
         return self.r.text
 
@@ -29,7 +24,7 @@ class Response(object):
         return self.r.status_code
 
     def json(self, **kwargs: Any) -> Union[Dict[str, Any], List[Any]]:
-        return self.r.json(**kwargs)  # type: ignore
+        return self.r.json(**kwargs)
 
     def json_array(self, **kwargs: Any) -> List[Any]:
         r = self.json(**kwargs)

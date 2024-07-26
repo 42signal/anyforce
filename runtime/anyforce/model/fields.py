@@ -18,7 +18,12 @@ from pypika.enums import SqlTypes
 from pypika.terms import Term
 from tortoise import fields
 from tortoise.fields import DatetimeField, relational
-from tortoise.fields.data import JsonDumpsFunc, JsonLoadsFunc
+from tortoise.fields.base import OnDelete
+from tortoise.fields.data import (
+    DatetimeFieldQueryValueType,
+    JsonDumpsFunc,
+    JsonLoadsFunc,
+)
 from tortoise.models import Model
 
 from ..json import fast_dumps
@@ -27,11 +32,11 @@ from ..json import loads as json_loads
 
 def SmallIntField(
     source_field: Optional[str] = None,
-    pk: bool = False,
+    primary_key: bool = False,
     null: bool = False,
     default: Any = None,
     unique: bool = False,
-    index: bool = False,
+    db_index: bool = False,
     description: Optional[str] = None,
     **kwargs: Any,
 ):
@@ -39,11 +44,11 @@ def SmallIntField(
         Union[int, fields.IntField],
         fields.SmallIntField(
             source_field=source_field,
-            pk=pk,
+            primary_key=primary_key,
             null=null,
             default=default,
             unique=unique,
-            index=index,
+            db_index=db_index,
             description=description,
             **kwargs,
         ),
@@ -52,11 +57,11 @@ def SmallIntField(
 
 def IntField(
     source_field: Optional[str] = None,
-    pk: bool = False,
+    primary_key: bool = False,
     null: bool = False,
     default: Any = None,
     unique: bool = False,
-    index: bool = False,
+    db_index: bool = False,
     description: Optional[str] = None,
     **kwargs: Any,
 ):
@@ -64,11 +69,11 @@ def IntField(
         Union[int, fields.IntField],
         fields.IntField(
             source_field=source_field,
-            pk=pk,
+            primary_key=primary_key,
             null=null,
             default=default,
             unique=unique,
-            index=index,
+            db_index=db_index,
             description=description,
             **kwargs,
         ),
@@ -77,11 +82,11 @@ def IntField(
 
 def BigIntField(
     source_field: Optional[str] = None,
-    pk: bool = False,
+    primary_key: bool = False,
     null: bool = False,
     default: Any = None,
     unique: bool = False,
-    index: bool = False,
+    db_index: bool = False,
     description: Optional[str] = None,
     **kwargs: Any,
 ):
@@ -89,11 +94,11 @@ def BigIntField(
         Union[int, fields.BigIntField],
         fields.BigIntField(
             source_field=source_field,
-            pk=pk,
+            primary_key=primary_key,
             null=null,
             default=default,
             unique=unique,
-            index=index,
+            db_index=db_index,
             description=description,
             **kwargs,
         ),
@@ -107,7 +112,7 @@ def FloatField(
     source_field: Optional[str] = None,
     null: bool = False,
     default: Any = None,
-    index: bool = False,
+    db_index: bool = False,
     description: Optional[str] = None,
     **kwargs: Any,
 ):
@@ -117,7 +122,7 @@ def FloatField(
             source_field=source_field,
             null=null,
             default=default,
-            index=index,
+            db_index=db_index,
             description=description,
             **kwargs,
         ),
@@ -130,7 +135,7 @@ def DecimalField(
     source_field: Optional[str] = None,
     null: bool = False,
     default: Any = None,
-    index: bool = False,
+    db_index: bool = False,
     description: Optional[str] = None,
     **kwargs: Any,
 ):
@@ -142,7 +147,7 @@ def DecimalField(
             source_field=source_field,
             null=null,
             default=default,
-            index=index,
+            db_index=db_index,
             description=description,
             **kwargs,
         ),
@@ -158,7 +163,7 @@ def DateField(
     null: bool = False,
     default: Any = None,
     unique: bool = False,
-    index: bool = False,
+    db_index: bool = False,
     description: Optional[str] = None,
     **kwargs: Any,
 ):
@@ -169,7 +174,7 @@ def DateField(
             null=null,
             default=default,
             unique=unique,
-            index=index,
+            db_index=db_index,
             description=description,
             **kwargs,
         ),
@@ -204,11 +209,14 @@ def TextField(
 
 class _LocalDatetimeField(DatetimeField):
     def to_db_value(
-        self, value: Optional[datetime], instance: Union[Type[Model], Model]
-    ) -> Optional[datetime]:
+        self,
+        value: Optional[DatetimeFieldQueryValueType],
+        instance: Union[Type[Model], Model],
+    ) -> Optional[DatetimeFieldQueryValueType]:
         value = super().to_db_value(value, instance)
         if (
             value
+            and isinstance(value, datetime)
             and value.tzinfo is not None
             and value.tzinfo.utcoffset(value) is not None
         ):
@@ -223,7 +231,7 @@ def LocalDatetimeField(
     null: bool = False,
     default: Any = None,
     unique: bool = False,
-    index: bool = False,
+    db_index: bool = False,
     description: Optional[str] = None,
     **kwargs: Any,
 ):
@@ -236,7 +244,7 @@ def LocalDatetimeField(
             null=null,
             default=default,
             unique=unique,
-            index=index,
+            db_index=db_index,
             description=description,
             **kwargs,
         ),
@@ -290,10 +298,10 @@ class NullableCharField(fields.CharField):
         self,
         max_length: int,
         source_field: Optional[str] = None,
-        pk: bool = False,
+        primary_key: bool = False,
         default: Any = None,
         unique: bool = False,
-        index: bool = False,
+        db_index: bool = False,
         description: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
@@ -301,10 +309,10 @@ class NullableCharField(fields.CharField):
             max_length,
             null=True,
             source_field=source_field,
-            pk=pk,
+            primary_key=primary_key,
             default=default,
             unique=unique,
-            index=index,
+            db_index=db_index,
             description=description,
             **kwargs,
         )
@@ -369,7 +377,7 @@ def SplitCharField(
     source_field: Optional[str] = None,
     null: bool = False,
     default: Optional[list[str]] = None,
-    index: bool = False,
+    db_index: bool = False,
     description: Optional[str] = None,
     **kwargs: Any,
 ):
@@ -380,7 +388,7 @@ def SplitCharField(
             source_field=source_field,
             null=null,
             default=default,
-            index=index,
+            db_index=db_index,
             description=description,
             **kwargs,
         ),
@@ -410,18 +418,20 @@ class CurrencyDBField(fields.Field[int], float):
     @property
     def constraints(self):
         return {
-            "ge": 1
-            if self.generated or getattr(self, "reference")
-            else -9223372036854775808,
+            "ge": (
+                1
+                if self.generated or getattr(self, "reference")
+                else -9223372036854775808
+            ),
             "le": 9223372036854775807,
         }
 
     def __init__(
-        self, pk: bool = False, multiply: float = 100.0, **kwargs: Any
+        self, primary_key: bool = False, multiply: float = 100.0, **kwargs: Any
     ) -> None:
-        if pk:
+        if primary_key:
             kwargs["generated"] = bool(kwargs.get("generated", True))
-        super().__init__(pk=pk, **kwargs)  # type: ignore
+        super().__init__(primary_key=primary_key, **kwargs)  # type: ignore
         self.multiply = multiply
 
     def to_python_value(self, value: Optional[Union[int, float]]) -> Optional[float]:
@@ -445,7 +455,7 @@ def CurrencyField(
     source_field: Optional[str] = None,
     null: bool = False,
     default: Any = None,
-    index: bool = False,
+    db_index: bool = False,
     description: Optional[str] = None,
     **kwargs: Any,
 ):
@@ -455,7 +465,7 @@ def CurrencyField(
             source_field=source_field,
             null=null,
             default=default,
-            index=index,
+            db_index=db_index,
             description=description,
             **kwargs,
         ),
@@ -469,13 +479,13 @@ class CurrencyDecimalField(fields.Field[float], float):
 
     def __init__(
         self,
-        pk: bool = False,
+        primary_key: bool = False,
         multiply: float = 100.0,
         decimal_places: int = 1,
         max_digits: int = 12,
         **kwargs: Any,
     ) -> None:
-        if pk:
+        if primary_key:
             kwargs["generated"] = bool(kwargs.get("generated", True))
 
         self.multiply = multiply
@@ -483,7 +493,7 @@ class CurrencyDecimalField(fields.Field[float], float):
         self.max_digits = max_digits
         self.precision = self.decimal_places + int(round(math.log(self.multiply, 10)))
 
-        super().__init__(pk=pk, **kwargs)  # type: ignore
+        super().__init__(primary_key=primary_key, **kwargs)  # type: ignore
 
     @property
     def SQL_TYPE(self) -> str:  # type: ignore
@@ -517,11 +527,11 @@ class CurrencyDecimalField(fields.Field[float], float):
 def CharField(
     max_length: int,
     source_field: Optional[str] = None,
-    pk: bool = False,
+    primary_key: bool = False,
     null: bool = False,
     default: Any = None,
     unique: bool = False,
-    index: bool = False,
+    db_index: bool = False,
     description: Optional[str] = None,
     **kwargs: Any,
 ):
@@ -530,11 +540,11 @@ def CharField(
         fields.CharField(
             max_length=max_length,
             source_field=source_field,
-            pk=pk,
+            primary_key=primary_key,
             null=null,
             default=default,
             unique=unique,
-            index=index,
+            db_index=db_index,
             description=description,
             **kwargs,
         ),
@@ -544,7 +554,7 @@ def CharField(
 def ForeignKeyField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
-    on_delete: str = fields.RESTRICT,
+    on_delete: OnDelete = OnDelete.RESTRICT,
     db_constraint: bool = True,
     **kwargs: Any,
 ) -> Union[Awaitable[Model], Model]:
@@ -563,7 +573,7 @@ def ManyToManyField(
     forward_key: Optional[str] = None,
     backward_key: str = "",
     related_name: str = "",
-    on_delete: str = fields.CASCADE,
+    on_delete: OnDelete = OnDelete.CASCADE,
     db_constraint: bool = True,
     **kwargs: Any,
 ) -> relational.ManyToManyRelation[Model]:
