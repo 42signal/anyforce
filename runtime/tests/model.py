@@ -9,7 +9,9 @@ class CharEnum(StrEnum):
 
 
 class User(BaseUpdateModel):
-    email = fields.CharField(64, index=True, null=False, description="邮箱", default="")
+    email = fields.CharField(
+        64, db_index=True, null=False, description="邮箱", default=""
+    )
     hashed_password = fields.CharField(128, null=False, default="")
 
 
@@ -41,12 +43,11 @@ class Model2(BaseUpdateModel):
     json_field = fields.JSONField(default={})
     binary_field = fields.BinaryField(null=True)
 
-    class PydanticMeta:
-        arbitrary_types_allowed = True
-        computed = [
+    class PydanticMeta(BaseUpdateModel.PydanticMeta):
+        computed = (
             "int_field_plus_bigint_field",
             "async_int_field_plus_bigint_field",
-        ]
+        )
 
     def int_field_plus_bigint_field(self) -> int:
         return self.int_field + self.bigint_field

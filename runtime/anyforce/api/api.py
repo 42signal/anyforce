@@ -22,7 +22,7 @@ from typing import (
 from fastapi import APIRouter, Body, Depends, Path, Query, Request, status
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import create_model  # type: ignore
+from pydantic import create_model
 from pypika.terms import Term
 from tortoise.expressions import Function, Q, RawSQL
 from tortoise.fields.base import Field
@@ -283,7 +283,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
     @property
     def connection_name(self):
-        return self.model._meta.default_connection  # type: ignore
+        meta: MetaInfo = getattr(self.model, "_meta")
+        return meta.default_connection
 
     async def get(
         self, ids: str, user: UserModel, request: Request, method: ResourceMethod
@@ -370,15 +371,13 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         CreateForm = self.create_form
         UpdateForm = self.update_form
 
-        DetailPydanticModels = Union[
-            List[DetailPydanticModel], DetailPydanticModel  # type: ignore
-        ]
+        DetailPydanticModels = Union[List[DetailPydanticModel], DetailPydanticModel]
         Response = create_model(
             f"{self.model.__module__}.{self.model.__name__}.Response",
             __base__=PydanticBaseModel,
             total=(int, 0),
-            summary=(Optional[ListPydanticModel], ...),  # type: ignore
-            data=(List[ListPydanticModel], ...),  # type: ignore
+            summary=(Optional[ListPydanticModel], ...),
+            data=(List[ListPydanticModel], ...),
         )
 
         methods: Dict[str, Callable[..., Any]] = {}
@@ -390,6 +389,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 response_model=DetailPydanticModels,
                 response_class=ORJSONResponse,
                 status_code=status.HTTP_201_CREATED,
+                response_model_exclude_unset=True,
+                response_model_exclude_none=True,
             )
             async def create(
                 request: Request,
@@ -421,6 +422,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                         obj_rtn = await self.after_create(
                             current_user, obj, input, request
                         )
+
                         if obj_rtn:
                             obj = obj_rtn
 
@@ -576,6 +578,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 "/{id}",
                 response_model=DetailPydanticModel,
                 response_class=ORJSONResponse,
+                response_model_exclude_unset=True,
+                response_model_exclude_none=True,
             )
             async def get(
                 request: Request,
@@ -606,6 +610,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 "/{ids}",
                 response_model=DetailPydanticModels,
                 response_class=ORJSONResponse,
+                response_model_exclude_unset=True,
+                response_model_exclude_none=True,
             )
             async def update(
                 request: Request,
@@ -615,7 +621,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
                 async with in_transaction(self.connection_name):
-                    rtns: List[Any] = []
+                    returns: List[Any] = []
                     excludes = await self.excludes(ResourceMethod.put)
                     for obj in await self.get(
                         ids, current_user, request, ResourceMethod.put
@@ -665,12 +671,12 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             if obj_rtn:
                                 obj = obj_rtn
 
-                        rtns.append(
+                        returns.append(
                             obj
                             if isinstance(obj, PydanticBaseModel)
                             else DetailPydanticModel.model_validate(obj)
                         )
-                    return rtns if len(rtns) > 1 else rtns[0]
+                    return returns if len(returns) > 1 else returns[0]
 
             methods["update"] = update
 
@@ -680,6 +686,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 "/{ids}",
                 response_model=Union[List[DeleteResponse], DeleteResponse],
                 response_class=ORJSONResponse,
+                response_model_exclude_unset=True,
+                response_model_exclude_none=True,
             )
             async def delete(
                 request: Request,

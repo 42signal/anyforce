@@ -22,7 +22,8 @@ HTTPUnAuthorizedError = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED, detail={"errors": "未认证"}
 )
 HTTPPreconditionRequiredError = HTTPException(
-    status_code=status.HTTP_428_PRECONDITION_REQUIRED, detail={"errors": "请求数据已过期"}
+    status_code=status.HTTP_428_PRECONDITION_REQUIRED,
+    detail={"errors": "请求数据已过期"},
 )
 
 
@@ -187,4 +188,4 @@ def handlers():
 def register(app: FastAPI):
     for errors, handler in handlers():
         for e in errors:
-            app.exception_handler(e)(handler)  # type: ignore
+            app.exception_handler(e)(handler)

@@ -28,9 +28,7 @@ jobs:
           key: ${{ runner.os }}-pdm-${{ hashFiles('**/pdm.lock') }}
           restore-keys: |
             ${{ runner.os }}-pdm-
-      - uses: actions/setup-node@v3
-        with:
-          node-version: "16"
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run test
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install
+      - run: pnpm run -r lint
+      - run: pnpm run -r test

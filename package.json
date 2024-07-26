@@ -1,26 +1,14 @@
 {
-    "name": "root",
-    "private": true,
-    "workspaces": [
-      "runtime",
-      "packages/*"
-    ],
-    "scripts": {
-      "dev": "lerna run dev --parallel",
-      "lint": "lerna run lint --parallel",
-      "format": "lerna run format --parallel",
-      "test": "lerna run test --parallel",
-      "build": "lerna run build --parallel",
-      "publish": "lerna run publish",
-      "update": "lerna run update --parallel",
-      "postinstall": "husky install && lerna run prepare --parallel"
-    },
-    "devDependencies": {
-      "ansi-regex": "6.0.1",
-      "concurrently": "8.2.0",
-      "husky": "8.0.3",
-      "lerna": "7.1.4",
-      "lint-staged": "13.2.3"
-    }
+  "name": "root",
+  "private": true,
+  "packageManager": "pnpm@9.6.0",
+  "scripts": {
+    "postinstall": "husky install"
+  },
+  "devDependencies": {
+    "ansi-regex": "6.0.1",
+    "concurrently": "8.2.2",
+    "husky": "9.1.1",
+    "lint-staged": "15.2.7"
   }
-  
+}

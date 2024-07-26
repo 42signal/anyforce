@@ -8,6 +8,7 @@ from anyforce.test import TestAPI as Base
 from anyforce.test import TestConfigs
 
 
+@pytest.mark.asyncio
 class TestAPI(Base):
     @pytest.fixture()
     def endpoint(self):
@@ -21,8 +22,8 @@ class TestAPI(Base):
                 "char_enum_field": "b",
                 "required_char_field": self.faker.pystr(),
                 "nullable_char_field": unique_field,
-                "int_field": self.faker.pyint(),
-                "bigint_field": self.faker.pyint(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
                 "text_field": self.faker.url(),
                 "json_field": list(self.faker.pytuple()),
             }, status.HTTP_201_CREATED, None
@@ -32,7 +33,7 @@ class TestAPI(Base):
                 "char_enum_field": "b",
                 "required_char_field": self.faker.pystr(),
                 "int_field": self.faker.name(),
-                "bigint_field": self.faker.pyint(),
+                "bigint_field": self.faker.pyint(max_value=65565),
                 "text_field": self.faker.url(),
                 "json_field": list(self.faker.pytuple()),
             }, status.HTTP_400_BAD_REQUEST, None
@@ -42,7 +43,7 @@ class TestAPI(Base):
                 "char_enum_field": "b",
                 "required_char_field": self.faker.pystr(),
                 "int_field": self.faker.name(),
-                "bigint_field": self.faker.pyint(),
+                "bigint_field": self.faker.pyint(max_value=65565),
                 "text_field": self.faker.name(),
                 "json_field": list(self.faker.pytuple()),
             }, status.HTTP_400_BAD_REQUEST, None
@@ -51,8 +52,8 @@ class TestAPI(Base):
             yield {
                 "char_enum_field": "c",
                 "required_char_field": self.faker.pystr(),
-                "int_field": self.faker.pyint(),
-                "bigint_field": self.faker.pyint(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
                 "text_field": self.faker.url(),
                 "json_field": list(self.faker.pytuple()),
             }, status.HTTP_400_BAD_REQUEST, None
@@ -62,8 +63,8 @@ class TestAPI(Base):
                 "char_enum_field": "a",
                 "required_char_field": self.faker.pystr(),
                 "nullable_char_field": unique_field,
-                "int_field": self.faker.pyint(),
-                "bigint_field": self.faker.pyint(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
                 "text_field": self.faker.url(),
                 "json_field": list(self.faker.pytuple()),
             }, status.HTTP_409_CONFLICT, None
@@ -72,8 +73,8 @@ class TestAPI(Base):
             yield {
                 "char_enum_field": "a",
                 "nullable_char_field": self.faker.pystr(),
-                "int_field": self.faker.pyint(),
-                "bigint_field": self.faker.pyint(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
                 "text_field": self.faker.url(),
                 "json_field": list(self.faker.pytuple()),
             }, status.HTTP_400_BAD_REQUEST, None
@@ -83,8 +84,8 @@ class TestAPI(Base):
                 "char_enum_field": "a",
                 "required_char_field": self.faker.pystr(min_chars=33, max_chars=64),
                 "nullable_char_field": self.faker.pystr(),
-                "int_field": self.faker.pyint(),
-                "bigint_field": self.faker.pyint(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
                 "text_field": self.faker.url(),
                 "json_field": list(self.faker.pytuple()),
             }, status.HTTP_400_BAD_REQUEST, None
@@ -94,8 +95,8 @@ class TestAPI(Base):
                 "char_enum_field": "a",
                 "required_char_field": self.faker.pystr(),
                 "nullable_char_field": self.faker.pystr(),
-                "int_field": self.faker.pyint(),
-                "bigint_field": self.faker.pyint(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
                 "text_field": self.faker.url(),
                 "json_field": list(self.faker.pytuple()),
             }, status.HTTP_201_CREATED, None
@@ -103,8 +104,8 @@ class TestAPI(Base):
                 "char_enum_field": "a",
                 "required_char_field": self.faker.pystr(),
                 "nullable_char_field": self.faker.pystr(),
-                "int_field": self.faker.pyint(),
-                "bigint_field": self.faker.pyint(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
                 "text_field": self.faker.url(),
                 "json_field": list(self.faker.pytuple()),
             }, status.HTTP_201_CREATED, None
@@ -168,7 +169,7 @@ class TestAPI(Base):
                 "prefetch": ["int_field_plus_bigint_field"],
                 "body": {
                     "text_field": "hi@google.com",
-                    "bigint_field": self.faker.pyint(),
+                    "bigint_field": self.faker.pyint(max_value=65565),
                 },
             }, status.HTTP_200_OK, None
 
@@ -181,13 +182,13 @@ class TestAPI(Base):
             yield {
                 "id": 2,
                 "prefetch": ["int_field_plus_bigint_field"],
-                "body": {"bigint_field": self.faker.pyint()},
+                "body": {"bigint_field": self.faker.pyint(max_value=65565)},
             }, status.HTTP_200_OK, None
 
             yield {
                 "id": 10000,
                 "body": {
-                    "bigint_field": self.faker.pyint(),
+                    "bigint_field": self.faker.pyint(max_value=65565),
                 },
             }, status.HTTP_404_NOT_FOUND, None
 

@@ -1,31 +1,55 @@
 import inspect
 from datetime import datetime
 from functools import lru_cache
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, cast
+from typing import (
+    Annotated,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
+    get_origin,
+    get_type_hints,
+)
 
+from pydantic import BaseModel as PydanticModel
+from pydantic import ConfigDict, create_model
+from pydantic.fields import FieldInfo
+from pydantic.functional_validators import BeforeValidator
+from pydantic_core import PydanticUndefined
 from tortoise import Tortoise
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.contrib.pydantic.base import PydanticModel
-from tortoise.contrib.pydantic.creator import (
-    pydantic_model_creator,  # type: ignore
-)
 from tortoise.contrib.pydantic.creator import PydanticMeta
 from tortoise.fields.base import Field
-from tortoise.fields.relational import ManyToManyFieldInstance
+from tortoise.fields.relational import (
+    BackwardFKRelation,
+    ForeignKeyFieldInstance,
+    ManyToManyFieldInstance,
+    OneToOneFieldInstance,
+    RelationalField,
+)
 from tortoise.models import Model
 
 from .fields import IntField, LocalDatetimeField
-from .patch import patch_pydantic
 
 
 class BaseModel(Model):
-    id: int = IntField(pk=True)
-    created_at: datetime = LocalDatetimeField(null=False, auto_now_add=True, index=True)
+    id: int = IntField(primary_key=True)
+    created_at: datetime = LocalDatetimeField(
+        null=False, auto_now_add=True, db_index=True
+    )
 
-    class Meta:
+    class Meta(Model.Meta):
         abstract = True
 
     class PydanticMeta:
+        include: Tuple[str, ...] = tuple()
+        exclude: Tuple[str, ...] = tuple()
+        computed: Tuple[str, ...] = tuple()
         max_recursion = 1
 
     #     computed: Tuple[str, ...] = ()  # 计算量, 异步计算量返回值需要标记为 Optional
@@ -33,7 +57,9 @@ class BaseModel(Model):
     #     list_exclude: Tuple[str, ...] = ()  # 列表排除
 
     class FormPydanticMeta(PydanticMeta):
-        computed: Tuple[str, ...] = tuple()  # 计算量不能作为 form 传入, 模拟可编辑时可覆盖
+        computed: Tuple[str, ...] = (
+            tuple()
+        )  # 计算量不能作为 form 传入, 模拟可编辑时可覆盖
 
     async def dict(self, prefetch: Optional[List[str]] = None) -> Dict[str, Any]:
         if prefetch:
@@ -95,7 +121,9 @@ class BaseModel(Model):
         from_models: Tuple[str, ...] = (),
     ) -> Type[PydanticModel]:
         meta: Optional[PydanticMeta] = getattr(cls, "PydanticMeta", None)
-        form_exclude: Tuple[str, ...] = meta and getattr(meta, "form_exclude", ()) or ()
+        form_exclude: Tuple[str, ...] = (
+            meta and getattr(meta, "form_exclude", None) or ()
+        )
         return cls.make_pydantic(
             name="form",
             exclude=(
@@ -131,21 +159,138 @@ class BaseModel(Model):
             parts.append("required" if required_override else "optional")
 
         meta = cls.FormPydanticMeta if is_form else cls.PydanticMeta
-        in_max_recursion = getattr(meta, "max_recursion", 0)
-        return patch_pydantic(
-            cls,
-            pydantic_model_creator(
-                cls,
-                name=".".join(parts),
-                include=include or (),
-                exclude=exclude or (),
-                meta_override=meta,
-            ),
-            from_models=(*from_models, cls.__qualname__),
-            required_override=required_override,
-            is_form=is_form,
-            max_recursion=max_recursion or in_max_recursion,
+        max_recursion = max_recursion if max_recursion else meta.max_recursion
+
+        from_models = (*from_models, cls.__qualname__)
+        include = include if include is not None else meta.include
+        exclude = exclude if exclude is not None else meta.exclude
+
+        fields: Dict[str, Any] = {}
+
+        # 处理数据库字段
+        for name, field in cls.fields_map().items():
+            if include and name not in include:
+                continue
+            if exclude and name in exclude:
+                continue
+
+            if isinstance(field, RelationalField):
+                if len(from_models) > max_recursion:
+                    continue
+
+                orig_model: Optional[Model] = getattr(field, "related_model", None)
+                assert orig_model
+
+                if isinstance(field, BackwardFKRelation):
+                    if is_form:
+                        continue
+
+                if isinstance(field, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
+                    fields[f"{name}_id"] = (
+                        int if field.null else Optional[int],
+                        FieldInfo(default=None if field.null else PydanticUndefined),
+                    )
+                    if is_form:
+                        continue
+
+                if not isinstance(orig_model, BaseModel):
+                    continue
+
+                if is_form:
+                    field_pydantic_model = orig_model.form(
+                        from_models=from_models,
+                        required_override=False,
+                    )
+                else:
+                    field_pydantic_model = orig_model.detail(
+                        from_models=from_models,
+                        required_override=required_override is True,
+                    )
+
+                if isinstance(field, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
+                    fields[name] = (
+                        Optional[field_pydantic_model],
+                        FieldInfo(title=field.description),
+                    )
+                elif isinstance(field, (BackwardFKRelation, ManyToManyFieldInstance)):
+                    fields[name] = (
+                        Optional[List[field_pydantic_model]],
+                        FieldInfo(title=field.description),
+                    )
+
+                continue
+
+            field_default = field.default
+            if required_override is True:
+                field_default = PydanticUndefined
+            elif required_override is False:
+                field_default = field.default
+            elif field_default is None:
+                if field.null:
+                    field_default = None
+                else:
+                    field_default = PydanticUndefined
+
+            type_hint = field.field_type
+            if not field.field_type:
+                type_hint = get_type_hints(field.to_python_value).get("return", Any)
+                if not field.null and get_origin(type_hint) == Union:
+                    args = getattr(type_hint, "__args__")
+                    if len(args) == 2 and args[1] is None:
+                        type_hint = args[0]
+            if field.null:
+                is_optional = get_origin(type_hint) == Union
+                if is_optional:
+                    args = getattr(type_hint, "__args__")
+                    is_optional = len(args) == 2 and args[1] is None
+                if not is_optional:
+                    type_hint = Optional[type_hint]
+            fields[name] = (
+                type_hint,
+                FieldInfo(
+                    default=None if callable(field_default) else field_default,
+                    default_factory=field_default if callable(field_default) else None,
+                    description=field.description,
+                ),
+            )
+
+        # 处理计算字段
+        for name in meta.computed:
+            if include and name not in include:
+                continue
+            if exclude and name in exclude:
+                continue
+
+            f = getattr(cls, name, None)
+            if not f or not callable(f):
+                continue
+
+            return_type = get_type_hints(f).get("return", Any)
+            is_optional = get_origin(return_type) == Union
+            if is_optional:
+                args = getattr(return_type, "__args__")
+                is_optional = len(args) == 2 and args[1] is None
+            if not is_optional:
+                return_type = Optional[return_type]
+
+            fields[name] = (
+                Annotated[return_type, BeforeValidator(BaseModel.validate_computed)],
+                FieldInfo(
+                    description=inspect.cleandoc(f.__doc__ or ""),
+                ),
+            )
+
+        return create_model(
+            ".".join(parts),
+            __config__=ConfigDict(from_attributes=True),
+            **fields,
         )
+
+    @staticmethod
+    def validate_computed(v: Any):
+        if callable(v):
+            return None
+        return v
 
     @classmethod
     def process(cls, input: Any):
@@ -221,17 +366,20 @@ class BaseModel(Model):
                     f = getattr(self, field, None)
                     if not f:
                         continue
-                    if inspect.iscoroutinefunction(f):
-                        setattr(self, field, await f())
+                    if callable(f):
+                        v = f()
+                        if inspect.isawaitable(v):
+                            v = await v
+                        setattr(self, field, v)
         else:
             computed = set()
 
-        normlized_args = [
+        normalized_args = [
             self.normalize_field(field) if isinstance(field, str) else field
             for field in args
             if field not in computed
         ]
-        return await super().fetch_related(*normlized_args, using_db=using_db)
+        return await super().fetch_related(*normalized_args, using_db=using_db)
 
     async def fetch_related_lazy(
         self, path: str, using_db: Optional[BaseDBAsyncClient] = None
@@ -290,7 +438,7 @@ class BaseModel(Model):
 
 
 class BaseUpdateModel(BaseModel):
-    updated_at: datetime = LocalDatetimeField(null=False, auto_now=True, index=True)
+    updated_at: datetime = LocalDatetimeField(null=False, auto_now=True, db_index=True)
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         abstract = True
