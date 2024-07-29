@@ -358,6 +358,7 @@ class BaseModel(Model):
                 ],
                 FieldInfo(
                     description=inspect.cleandoc(f.__doc__ or ""),
+                    default=None,
                 ),
             )
 
