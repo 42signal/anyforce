@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from typing import Optional, Union
 
 import colorama
@@ -25,7 +26,7 @@ log_level = logging.getLevelNamesMapping().get(
 )
 logging.getLogger().setLevel(log_level)
 
-colorful_log_handler = logging.StreamHandler()
+colorful_log_handler = logging.StreamHandler(sys.stdout)
 colorful_log_handler.setFormatter(
     jsonlogger.JsonFormatter(
         "%(levelname)s %(filename) %(lineno)s %(message)s",
