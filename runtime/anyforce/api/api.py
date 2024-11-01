@@ -350,12 +350,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 qs.append(v)
             elif (
                 v is not None
-                and v != ""
                 and not (isinstance(v, list) and not v)
                 and not (isinstance(v, dict) and not v)
             ):
-                if v == "$empty":
-                    v = ""
                 q_kwargs[k] = v
         kv_q = Q(
             *qs,
