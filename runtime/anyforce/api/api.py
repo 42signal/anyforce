@@ -532,7 +532,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                         summary = objs[0]
 
                 if group_by:
-                    group_by_fields = ",".join([f"`{field}`" for field in group_by])
+                    group_by_fields = ",".join(
+                        [f"COALESCE(`{field}`, '')" for field in group_by]
+                    )
                     total_q = q.annotate(
                         total=RawSQL(f"COUNT(DISTINCT {group_by_fields})")
                     ).values("total")
