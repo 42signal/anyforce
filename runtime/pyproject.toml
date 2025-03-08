@@ -1,6 +1,6 @@
 [project]
 name = "anyforce"
-version = "0.41.1"
+version = "0.42.0"
 description = ""
 authors = [
     {name = "exherb", email = "i@4leaf.me"},
@@ -11,8 +11,6 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "tortoise-orm>0.20.0",
     "orjson>=3.10.6",
-    "python-json-logger>=2.0.7",
-    "colorama>=0.4.6",
     "aiohttp[speedups]>=3.9.5",
     "starlette-context>=0.3.6",
     "itsdangerous>=2.2.0",
