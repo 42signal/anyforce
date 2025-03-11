@@ -13,12 +13,12 @@ from tortoise.transactions import in_transaction
 
 from ...coro import run
 from ...json import loads
-from ...logging import getLogger
+from ...logging import get_logger
 from ...model import BaseModel
 from ..api import DeleteResponse, Model
 from .typing import Response, Worker
 
-logger = getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @run
@@ -28,7 +28,7 @@ async def update(
     q: Dict[str, Any],
     form: Dict[str, Any],
 ):
-    logger.with_field(app=app, model=model, q=q, form=form).info("update")
+    logger.bind(app=app, model=model, q=q, form=form).info("update")
     model_cls = Tortoise.apps[app][model]
     async with in_transaction(app):
         obj = (
@@ -77,7 +77,7 @@ class Scheduler(object):
             self.worker.cancel(id)
             return DeleteResponse(id=id)
 
-        logger.with_field(list=list, delete=delete).info("bind")
+        logger.bind(list=list, delete=delete).info("bind")
 
         return router
 

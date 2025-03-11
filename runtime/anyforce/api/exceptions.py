@@ -8,10 +8,10 @@ from pydantic import ValidationError
 from pydantic_core import ErrorDetails
 from tortoise import exceptions
 
-from ..logging import getLogger
+from ..logging import get_logger
 from ..model.enum import EnumMissingError
 
-logger = getLogger(__name__)
+logger = get_logger(__name__)
 
 HTTPForbiddenError = HTTPException(
     status_code=status.HTTP_403_FORBIDDEN, detail={"errors": "禁止访问"}
@@ -115,9 +115,7 @@ def translate_validation_exception(e: ValidationException):
             msgs.add(translate_validation_error_detail(cast(Dict[str, Any], child_e)))
         else:
             msgs.add(str(child_e))
-            logger.with_field(e=child_e, raw_error_type=type(child_e)).warn(
-                "not translate"
-            )
+            logger.bind(e=child_e, raw_error_type=type(child_e)).warn("not translate")
     return list(msgs)
 
 
@@ -136,7 +134,7 @@ def translate_validation_error_detail(e: dict[str, Any] | ErrorDetails):
 
     translate_msg = validation_error_translation.get(typ)
     if not translate_msg:
-        logger.with_field(raw_error=e, raw_error_type=type(e), msg=msg).info(
+        logger.bind(raw_error=e, raw_error_type=type(e), msg=msg).info(
             "translate exception"
         )
     msg = translate_msg or msg
@@ -173,7 +171,7 @@ def translate_orm_error(
                     arg = f"值为 {value} 的对象已存在" if value else "对象已存在"
                     break
             if not matched:
-                logger.with_field(arg=arg, type=type(arg)).warn("not translate")
+                logger.bind(arg=arg, type=type(arg)).warn("not translate")
             args.append(str(arg))
         return status_code, args
     if isinstance(e, exceptions.ValidationError):
@@ -200,7 +198,7 @@ def handlers():
                 msg = msg_template.format(*groups)
                 break
         if not matched:
-            logger.with_field(msg=msg, type=type(exc)).warn("not translate")
+            logger.bind(msg=msg, type=type(exc)).warn("not translate")
         return ORJSONResponse(
             {"detail": {"errors": msg}},
             status_code=status.HTTP_400_BAD_REQUEST,
