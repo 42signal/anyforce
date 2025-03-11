@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:83ea0d1dbd9b840e435867f94374ff4f96eb2eaeba17a943db25b55ce9547866"
+content_hash = "sha256:4d15a473c2e3e0e4a1b46ff342818d5b28ddc4330d9e7bda728f04f1a810c6da"
 
 [[metadata.targets]]
 requires_python = ">=3.11"
@@ -1689,6 +1689,20 @@ dependencies = [
 files = [
     {file = "starlette_context-0.3.6-py3-none-any.whl", hash = "sha256:b14ce373fbb6895a2182a7104b9f63ba20c8db83444005fb9a844dd77ad9895c"},
     {file = "starlette_context-0.3.6.tar.gz", hash = "sha256:d361a36ba2d4acca3ab680f917b25e281533d725374752d47607a859041958cb"},
+]
+
+[[package]]
+name = "structlog"
+version = "25.1.0"
+requires_python = ">=3.8"
+summary = "Structured Logging for Python"
+groups = ["default"]
+dependencies = [
+    "typing-extensions; python_version < \"3.11\"",
+]
+files = [
+    {file = "structlog-25.1.0-py3-none-any.whl", hash = "sha256:843fe4f254540329f380812cbe612e1af5ec5b8172205ae634679cd35a6d6321"},
+    {file = "structlog-25.1.0.tar.gz", hash = "sha256:2ef2a572e0e27f09664965d31a576afe64e46ac6084ef5cec3c2b8cd6e4e3ad3"},
 ]
 
 [[package]]
