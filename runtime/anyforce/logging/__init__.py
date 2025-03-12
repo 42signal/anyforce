@@ -39,8 +39,8 @@ shared_processors: list[structlog.typing.Processor] = [
     add_logger,
 ]
 
-graylog_address = os.environ.get("GRAYLOG_ADDRESS", "")
-if graylog_address or not sys.stderr.isatty():
+gelf_address = os.environ.get("LOG_GELF_ADDRESS", "")
+if gelf_address or not sys.stderr.isatty():
 
     hostname = socket.gethostname()
 
@@ -61,11 +61,11 @@ if graylog_address or not sys.stderr.isatty():
 
     enable_stdout = os.environ.get("LOG_ENABLE_STDOUT", "false") == "true"
     logger_factory = (
-        multi.Factory(gelf.UDPFactory(graylog_address), structlog.BytesLoggerFactory())
+        multi.Factory(gelf.UDPFactory(gelf_address), structlog.BytesLoggerFactory())
         if enable_stdout
         else multi.Factory(
-            gelf.UDPFactory(graylog_address)
-            if graylog_address
+            gelf.UDPFactory(gelf_address)
+            if gelf_address
             else structlog.BytesLoggerFactory()
         )
     )
