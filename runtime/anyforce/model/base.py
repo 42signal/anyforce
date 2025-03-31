@@ -1,5 +1,5 @@
 import inspect
-from datetime import datetime
+from datetime import datetime, time, timezone, timedelta
 from functools import lru_cache
 from typing import (
     Annotated,
@@ -296,6 +296,10 @@ class BaseModel(Model):
                 type_hint = List[str]
             elif isinstance(field, (CurrencyDBField, tortoise_fields.DecimalField)):
                 type_hint = float
+            elif isinstance(field, tortoise_fields.TimeField):
+                type_hint = Annotated[
+                    time, BeforeValidator(BaseModel.ensure_time_utc_timezone)
+                ]
             else:
                 type_hint = field.field_type
                 if (
@@ -368,6 +372,19 @@ class BaseModel(Model):
             __validators__=meta.validators,
             **fields,
         )
+
+    @staticmethod
+    def ensure_time_utc_timezone(v: Any):
+        if not isinstance(v, time):
+            if isinstance(v, str):
+                v = time.fromisoformat(v)
+            elif isinstance(v, timedelta):
+                v = (datetime.min + v).time()
+            else:
+                return v
+        if v.tzinfo is None:
+            return v
+        return datetime.combine(datetime.min, v).astimezone(timezone.utc).time()
 
     @staticmethod
     def validate_computed(v: Any):

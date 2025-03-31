@@ -1,5 +1,5 @@
 import math
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import (
     Any,
@@ -249,6 +249,15 @@ def LocalDatetimeField(
             **kwargs,
         ),
     )
+
+
+class TimeField(fields.TimeField):
+
+    def to_python_value(self, value: Any):
+        value = super().to_python_value(value)
+        if isinstance(value, timedelta):
+            value = (datetime.min + value).time()
+        return value
 
 
 def JSONField(
