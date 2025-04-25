@@ -9,12 +9,12 @@ from fastapi.routing import APIRouter
 from pydantic import BaseModel as PydanticBaseModel
 from tortoise import Tortoise
 from tortoise.models import MetaInfo
-from tortoise.transactions import in_transaction
 
 from ...coro import run
 from ...json import loads
 from ...logging import get_logger
 from ...model import BaseModel
+from ...model.functions import in_transaction
 from ..api import DeleteResponse, Model
 from .typing import Response, Worker
 

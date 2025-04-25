@@ -13,9 +13,9 @@ from typing import (
     cast,
 )
 
-from pypika import functions
-from pypika.enums import SqlTypes
-from pypika.terms import Term
+from pypika_tortoise import functions
+from pypika_tortoise.enums import SqlTypes
+from pypika_tortoise.terms import Term
 from tortoise import fields
 from tortoise.fields import DatetimeField, relational
 from tortoise.fields.base import OnDelete
@@ -252,7 +252,6 @@ def LocalDatetimeField(
 
 
 class TimeField(fields.TimeField):
-
     def to_python_value(self, value: Any):
         value = super().to_python_value(value)
         if isinstance(value, timedelta):

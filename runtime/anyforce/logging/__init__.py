@@ -41,7 +41,6 @@ shared_processors: list[structlog.typing.Processor] = [
 
 gelf_address = os.environ.get("LOG_GELF_ADDRESS", "")
 if gelf_address or not sys.stderr.isatty():
-
     hostname = socket.gethostname()
 
     def gelf_processor(logger: Any, method_name: str, event_dict: EventDict):
