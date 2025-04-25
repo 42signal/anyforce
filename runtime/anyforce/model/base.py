@@ -1,5 +1,5 @@
 import inspect
-from datetime import datetime, time, timezone, timedelta
+from datetime import datetime, time, timedelta, timezone
 from functools import lru_cache
 from typing import (
     Annotated,
@@ -111,10 +111,8 @@ class BaseModel(Model):
         using_db: Optional[BaseDBAsyncClient] = None,
         **kwargs: Any,
     ):
-        return (
-            await super().update_or_create(  # pyright: ignore[reportUnknownMemberType]
-                defaults=defaults, using_db=using_db, **kwargs
-            )
+        return await super().update_or_create(  # pyright: ignore[reportUnknownMemberType]
+            defaults=defaults, using_db=using_db, **kwargs
         )
 
     @classmethod

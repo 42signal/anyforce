@@ -23,16 +23,16 @@ from fastapi import APIRouter, Body, Depends, Path, Query, Request, status
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import create_model
-from pypika.terms import Term
+from pypika_tortoise.terms import Term
 from tortoise.expressions import Function, Q, RawSQL
 from tortoise.fields.base import Field
+from tortoise.functions import Count
 from tortoise.models import MetaInfo
 from tortoise.queryset import QuerySet
-from tortoise.transactions import in_transaction
 
 from .. import json
 from ..model import BaseModel
-from ..model.query import DistinctCountQuery
+from ..model.functions import in_transaction
 from .exceptions import (
     HTTPForbiddenError,
     HTTPNotFoundError,
@@ -535,14 +535,17 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     group_by_fields = ",".join(
                         [f"COALESCE(`{field}`, '')" for field in group_by]
                     )
-                    total_q = q.annotate(
-                        total=RawSQL(f"COUNT(DISTINCT {group_by_fields})")
-                    ).values("total")
-                    total_q.group_bys = tuple()
-                    r = cast(List[Dict[str, int]], await total_q)
+                    r = await (
+                        q.annotate(total=RawSQL(f"COUNT(DISTINCT {group_by_fields})"))
+                        .group_by()
+                        .values("total")
+                    )
                     total = r[0]["total"] if r else 0
                 else:
-                    total = await DistinctCountQuery(q.count())
+                    r = await q.annotate(total=Count("id", distinct=True)).values(
+                        "total"
+                    )
+                    total = r[0]["total"] if r else 0
                     q = q.distinct()
 
                 q = q.offset(offset).limit(limit)

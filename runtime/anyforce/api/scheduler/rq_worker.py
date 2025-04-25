@@ -7,9 +7,8 @@ from rq.defaults import DEFAULT_RESULT_TTL
 from rq.job import Job as RQJOb
 from rq.registry import ScheduledJobRegistry
 
-from .typing import Job
+from .typing import Job, Response
 from .typing import JobStatus as Status
-from .typing import Response
 from .typing import Worker as WorkerProtocol
 
 
