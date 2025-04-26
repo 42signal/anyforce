@@ -1,28 +1,28 @@
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable
 
 class Retry:
-    def __init__(self, max: int, interval: Union[int, List[int]] = ...) -> None: ...
+    def __init__(self, max: int, interval: int | list[int] = ...) -> None: ...
 
 class Job:
     id: str
-    meta: Dict[str, Any]
-    func: Optional[Callable[..., Any]]
-    args: List[Any]
-    kwargs: Dict[str, Any]
-    result_ttl: Optional[int]
-    ttl: Optional[int]
+    meta: dict[str, Any]
+    func: Callable[..., Any] | None
+    args: list[Any]
+    kwargs: dict[str, Any]
+    result_ttl: int | None
+    ttl: int | None
     is_finished: bool
     is_failed: bool
     is_canceled: bool
     is_stopped: bool
-    exc_info: Optional[str]
-    def return_value(self) -> Optional[Any]: ...
+    exc_info: str | None
+    def return_value(self) -> Any | None: ...
     @classmethod
     def fetch(
-        cls, id: str, connection: Any, serializer: Optional[Any] = ...
+        cls, id: str, connection: Any, serializer: Any | None = ...
     ) -> Job: ...
     @classmethod
     def fetch_many(
-        cls, job_ids: List[str], connection: Any, serializer: Optional[Any] = ...
-    ) -> List[Job]: ...
+        cls, job_ids: list[str], connection: Any, serializer: Any | None = ...
+    ) -> list[Job]: ...
     def cancel(self) -> None: ...

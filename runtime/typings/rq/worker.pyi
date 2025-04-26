@@ -1,11 +1,11 @@
-from typing import Any, List, Type
+from typing import Any, Type
 
 from .queue import Queue
 
 class Worker:
     def __init__(
         self,
-        queues: List[Queue],
+        queues: list[Queue],
         name: str = ...,
         default_result_ttl: int = ...,
         connection: Any = ...,

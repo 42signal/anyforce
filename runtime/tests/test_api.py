@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from fastapi import status
@@ -150,7 +150,7 @@ class TestAPI(Base):
 
     @pytest.fixture()
     def list_tests(self):
-        def check_computed(params: Dict[str, Any], r: Any) -> None:
+        def check_computed(params: dict[str, Any], r: Any) -> None:
             for e in r["data"]:
                 assert (
                     e["int_field_plus_bigint_field"]
@@ -175,7 +175,7 @@ class TestAPI(Base):
                 check_computed,
             )
 
-            def check1(params: Dict[str, Any], r: Any) -> None:
+            def check1(params: dict[str, Any], r: Any) -> None:
                 assert r["total"] == 1
                 assert r["data"][0]["char_enum_field"] == "b"
 

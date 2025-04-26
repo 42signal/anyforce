@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, cast
 
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -17,15 +17,17 @@ class RecoverableModel(BaseUpdateModel):
         abstract = True
 
     async def update(self, input: Any):
-        dic: Dict[str, Any] = (
-            input if isinstance(input, dict) else input.dict(exclude_unset=True)
+        dic: dict[str, Any] = (
+            cast(dict[str, Any], input)
+            if isinstance(input, dict)
+            else input.dict(exclude_unset=True)
         )
         is_deleted = dic.get("is_deleted")
         if is_deleted is not None and self.is_deleted != is_deleted:
             dic["delete_or_recover_at"] = datetime.now()
         return await super().update(dic)
 
-    async def delete(self, using_db: Optional[BaseDBAsyncClient] = None) -> None:
+    async def delete(self, using_db: BaseDBAsyncClient | None = None) -> None:
         await self.update(
             {
                 "is_deleted": True,

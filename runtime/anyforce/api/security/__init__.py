@@ -1,11 +1,11 @@
-from typing import Any, Callable, Coroutine, Union
+from typing import Any, Callable, Coroutine
 
 from fastapi import Depends
 
 from ..g import set_user
 
 
-def with_context(get_current_user: Callable[..., Union[Coroutine[Any, Any, Any], Any]]):
+def with_context(get_current_user: Callable[..., Coroutine[Any, Any, Any] | Any]):
     async def f(current_user: Any = Depends(get_current_user)):
         set_user(current_user)
         return current_user

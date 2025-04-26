@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from fastapi import APIRouter, FastAPI, Request
@@ -24,7 +24,7 @@ def router(app: FastAPI):
         text_field: AnyUrl
 
     class UpdateForm(Model2.form(required_override=False)):
-        text_field: Optional[EmailStr] = None
+        text_field: EmailStr | None = None
 
     class API(PublicAPI[Model2, CreateForm, UpdateForm]):
         def __init__(self) -> None:

@@ -1,5 +1,3 @@
-from typing import Optional
-
 from anyforce.model import BaseUpdateModel, StrEnum, fields
 
 
@@ -53,7 +51,7 @@ class Model2(BaseUpdateModel):
     def int_field_plus_bigint_field(self) -> int:
         return self.int_field + self.bigint_field
 
-    async def async_int_field_plus_bigint_field(self) -> Optional[int]:
+    async def async_int_field_plus_bigint_field(self) -> int | None:
         return self.int_field + self.bigint_field
 
 

@@ -3,11 +3,7 @@ from typing import (
     Any,
     Awaitable,
     Callable,
-    Dict,
-    List,
-    Optional,
     Protocol,
-    Tuple,
     TypeVar,
 )
 
@@ -18,7 +14,7 @@ from ...model.enum import StrEnum
 T = TypeVar("T")
 
 
-def formatter(label: str, formatter: Callable[..., List[Tuple[str, Any]]]):
+def formatter(label: str, formatter: Callable[..., list[tuple[str, Any]]]):
     def wrapper(f: Callable[..., T]) -> Callable[..., T]:
         setattr(f, "label", label)
         setattr(f, "formatter", formatter)
@@ -38,19 +34,21 @@ class Job(BaseModel):
     id: str
     at: datetime
     status: JobStatus = JobStatus.pending
-    func: Optional[Callable[..., Any]] = Field(None, exclude=True)
-    meta: Dict[str, Any] = Field(default_factory=dict)
-    args: List[Any] = Field(default_factory=list)
-    kwargs: Dict[str, Any] = Field(default_factory=dict)
+    func: Callable[..., Any] | None = Field(None, exclude=True)
+    meta: dict[str, Any] = Field(default_factory=dict)
+    args: list[Any] = Field(default_factory=list)
+    kwargs: dict[str, Any] = Field(default_factory=dict)
     explain_func: str = ""
-    explain_lines: List[Tuple[str, List[Tuple[str, Any]]]] = Field(default_factory=list)
-    exc_info: Optional[str] = None
-    return_value: Optional[Any] = None
+    explain_lines: list[tuple[str, list[tuple[str, Any]]]] = Field(
+        default_factory=list[tuple[str, list[tuple[str, Any]]]]
+    )
+    exc_info: str | None = None
+    return_value: Any | None = None
 
 
 class Response(BaseModel):
     total: int
-    data: List[Job]
+    data: list[Job]
 
 
 class Worker(Protocol):
@@ -60,7 +58,7 @@ class Worker(Protocol):
         raise NotImplementedError()
 
     def list(
-        self, offset: int, limit: int, condition: Optional[Dict[str, str]]
+        self, offset: int, limit: int, condition: dict[str, str] | None
     ) -> Awaitable[Response]:
         raise NotImplementedError()
 

@@ -1,19 +1,19 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 def encode(
-    claims: Dict[str, Any],
+    claims: dict[str, Any],
     key: str,
-    algorithm: Optional[str] = ...,
-    headers: Optional[Dict[str, str]] = ...,
-    access_token: Optional[str] = ...,
+    algorithm: str | None = ...,
+    headers: dict[str, str] | None = ...,
+    access_token: str | None = ...,
 ) -> str: ...
 def decode(
     token: str,
     key: str,
-    algorithms: Optional[Union[List[str], str]] = ...,
-    options: Optional[Dict[str, Any]] = ...,
-    audience: Optional[str] = ...,
-    issuer: Optional[Union[List[str], str]] = ...,
-    subject: Optional[str] = ...,
-    access_token: Optional[str] = ...,
-) -> Dict[str, str]: ...
+    algorithms: list[str] | str | None = ...,
+    options: dict[str, Any] | None = ...,
+    audience: str | None = ...,
+    issuer: list[str] | str | None = ...,
+    subject: str | None = ...,
+    access_token: str | None = ...,
+) -> dict[str, str]: ...

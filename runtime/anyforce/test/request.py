@@ -1,5 +1,5 @@
 import json as stdjson
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import httpx
 from fastapi.testclient import TestClient
@@ -23,15 +23,15 @@ class Response(object):
     def status_code(self) -> int:
         return self.r.status_code
 
-    def json(self, **kwargs: Any) -> Union[Dict[str, Any], List[Any]]:
+    def json(self, **kwargs: Any) -> dict[str, Any] | list[Any]:
         return self.r.json(**kwargs)
 
-    def json_array(self, **kwargs: Any) -> List[Any]:
+    def json_array(self, **kwargs: Any) -> list[Any]:
         r = self.json(**kwargs)
         assert not isinstance(r, dict)
         return r
 
-    def json_object(self, **kwargs: Any) -> Dict[str, Any]:
+    def json_object(self, **kwargs: Any) -> dict[str, Any]:
         r = self.json(**kwargs)
         assert isinstance(r, dict)
         return r
@@ -41,9 +41,9 @@ def request(
     client: TestClient,
     method: str,
     url: str,
-    params: Optional[Dict[str, Any]] = None,
-    headers: Optional[Dict[str, Any]] = None,
-    json: Optional[Any] = None,
+    params: dict[str, Any] | None = None,
+    headers: dict[str, Any] | None = None,
+    json: Any | None = None,
     follow_redirects: bool = True,
     *args: Any,
     **kwargs: Any,
@@ -66,8 +66,8 @@ def request(
 def get(
     client: TestClient,
     url: str,
-    params: Optional[Dict[str, Any]] = None,
-    headers: Optional[Dict[str, Any]] = None,
+    params: dict[str, Any] | None = None,
+    headers: dict[str, Any] | None = None,
     *args: Any,
     **kwargs: Any,
 ) -> Response:
@@ -85,9 +85,9 @@ def get(
 def post(
     client: TestClient,
     url: str,
-    params: Optional[Dict[str, Any]] = None,
-    headers: Optional[Dict[str, Any]] = None,
-    json: Optional[Any] = None,
+    params: dict[str, Any] | None = None,
+    headers: dict[str, Any] | None = None,
+    json: Any | None = None,
     *args: Any,
     **kwargs: Any,
 ) -> Response:
@@ -106,9 +106,9 @@ def post(
 def put(
     client: TestClient,
     url: str,
-    params: Optional[Dict[str, Any]] = None,
-    headers: Optional[Dict[str, Any]] = None,
-    json: Optional[Any] = None,
+    params: dict[str, Any] | None = None,
+    headers: dict[str, Any] | None = None,
+    json: Any | None = None,
     *args: Any,
     **kwargs: Any,
 ) -> Response:
@@ -127,8 +127,8 @@ def put(
 def delete(
     client: TestClient,
     url: str,
-    params: Optional[Dict[str, Any]] = None,
-    headers: Optional[Dict[str, Any]] = None,
+    params: dict[str, Any] | None = None,
+    headers: dict[str, Any] | None = None,
     *args: Any,
     **kwargs: Any,
 ) -> Response:
