@@ -44,7 +44,7 @@ url = "https://mirrors.cloud.tencent.com/pypi/simple"
 default = true
 
 [tool.setuptools]
-py-modules = ["anyforce"]
+package-dir = {"anyforce" = "anyforce"}
 
 [tool.pyright]
 typeCheckingMode = "strict"
