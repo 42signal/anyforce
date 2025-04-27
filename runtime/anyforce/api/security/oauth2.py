@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 from urllib.parse import urlencode, urljoin
 
 import aiohttp
@@ -15,7 +15,7 @@ class OAuth2(object):
         base_url: str,
         client_id: str,
         client_secret: str,
-        scheme: Optional[str] = None,
+        scheme: str | None = None,
     ):
         super().__init__()
         self.base_url = base_url
@@ -23,7 +23,7 @@ class OAuth2(object):
         self.client_secret = client_secret
         self.scheme = scheme
 
-    def join(self, path: str, q: Dict[str, str] = {}):
+    def join(self, path: str, q: dict[str, str] = {}):
         return f"{urljoin(self.base_url, path)}?{urlencode(q)}"
 
     def redirect_url(self, request: Request, redirect_uri: str):
@@ -102,7 +102,7 @@ class OAuth2(object):
 
         @router.get("/logout")
         def logout(request: Request):
-            params: Dict[str, str] = {
+            params: dict[str, str] = {
                 "client_id": self.client_id,
                 "post_logout_redirect_uri": post_logout_redirect_uri,
             }

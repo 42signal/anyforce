@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from functools import reduce
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from rq import Queue
 from rq.defaults import DEFAULT_RESULT_TTL
@@ -32,7 +32,7 @@ class Worker(object):
     async def explain(self, job: Job) -> Job:
         return job
 
-    async def filter(self, condition: Optional[Dict[str, str]], job: Job):
+    async def filter(self, condition: dict[str, str] | None, job: Job):
         if not condition:
             return True
         for k, v in condition.items():
@@ -53,7 +53,7 @@ class Worker(object):
         return self.queue.enqueue_at(datetime, f, *args, **kwargs)
 
     async def list(
-        self, offset: int, limit: int, condition: Optional[Dict[str, str]] = None
+        self, offset: int, limit: int, condition: dict[str, str] | None = None
     ) -> Response:
         jobs = await self.list_jobs(offset, limit, condition)
         return Response(
@@ -61,14 +61,14 @@ class Worker(object):
         )
 
     async def list_jobs(
-        self, offset: int, limit: int, condition: Optional[Dict[str, str]]
+        self, offset: int, limit: int, condition: dict[str, str] | None
     ):
-        jobs: List[Job] = []
+        jobs: list[Job] = []
         for registry in self.registries:
             job_ids = registry.get_job_ids()
             for i in range(0, len(job_ids), limit):
                 chunk_job_ids = job_ids[i : i + limit]
-                rq_jobs: List[RQJOb] = RQJOb.fetch_many(
+                rq_jobs: list[RQJOb] = RQJOb.fetch_many(
                     chunk_job_ids,
                     connection=self.queue.connection,
                     serializer=self.queue.serializer,

@@ -2,25 +2,24 @@
     "name": "runtime",
     "private": true,
     "scripts": {
-        "postinstall": "pip3 install --upgrade pdm --break-system-packages && pdm install && touch $(pdm run python -c 'import os, pypika_tortoise; print(os.path.dirname(pypika_tortoise.__file__))')/py.typed",
+        "postinstall": "pip3 install --upgrade uv --break-system-packages && uv sync && touch $(uv run python -c 'import os, pypika_tortoise; print(os.path.dirname(pypika_tortoise.__file__))')/py.typed",
         "lint": "concurrently npm:lint-ruff npm:lint-pyright",
-        "lint-ruff": "pdm run python3 -m ruff check --fix",
-        "lint-pyright": "pdm run pyright -p .",
-        "format": "pdm run ruff check --select I --fix && pdm run ruff format",
-        "test": "pdm run python -m pytest -s --cov-report html --cov=anyforce",
-        "build": "pdm build",
-        "publish": "pdm run python -m twine upload dist/* -u __token__ -p $PYPI_API_TOKEN",
-        "update": "pdm update --update-eager -G :all --no-self --save-exact --unconstrained",
+        "lint-ruff": "uv run ruff check --fix",
+        "lint-pyright": "pyright -p .",
+        "format": "uv run ruff check --select I --fix && uv run ruff format",
+        "test": "uv run -m pytest -s --cov-report html --cov=anyforce",
+        "build": "uv build",
+        "publish": "uv publish -u __token__ -p $PYPI_API_TOKEN",
         "lint-staged": "lint-staged"
     },
     "lint-staged": {
         "**/*.py": [
-            "pdm run python3 -m ruff check --fix",
-            "pdm run pyright -p ."
+            "uv run ruff check --fix",
+            "pyright -p ."
         ]
     },
     "devDependencies": {
-        "concurrently": "^8.2.2",
-        "pyright": "1.1.373"
+        "concurrently": "9.1.2",
+        "pyright": "1.1.400"
     }
 }

@@ -1,10 +1,11 @@
 [project]
 name = "anyforce"
-version = "0.44.0"
+version = "0.44.1"
 description = ""
 authors = [
     {name = "exherb", email = "i@4leaf.me"},
 ]
+requires-python = ">=3.11"
 dependencies = [
     "uvicorn[standard]>=0.30.3",
     "pydantic[email]>2.0.0",
@@ -22,39 +23,6 @@ dependencies = [
     "pydantic-settings>=2.3.4",
     "structlog>=25.1.0",
 ]
-requires-python = ">=3.11"
-license = {text = "COPYRIGHT"}
-
-[project.urls]
-homepage = "https://github.com/42signal/anyforce"
-
-[build-system]
-requires = ["pdm-pep517"]
-build-backend = "pdm.pep517.api"
-
-[tool]
-[tool.pdm]
-includes = [
-    "anyforce/**/*.py",
-    "anyforce/py.typed",
-    "README.md",
-]
-[[tool.pdm.source]]
-name = "pypi"
-url = "https://mirrors.aliyun.com/pypi/simple"
-verify_ssl = true
-
-[tool.isort]
-profile = "black"
-line_length = 79
-multi_line_output = 3
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = [
-    "tests",
-]
-
 [dependency-groups]
 dev = [
     "pytest==8.3.1",
@@ -65,4 +33,28 @@ dev = [
     "httpx==0.27.0",
     "twine==5.1.1",
     "ruff>=0.11.6",
+]
+
+[project.urls]
+homepage = "https://github.com/42signal/anyforce"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://mirrors.cloud.tencent.com/pypi/simple"
+default = true
+
+[tool.setuptools]
+py-modules = ["anyforce"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+stubPath = "./typings"
+reportIncompatibleVariableOverride = "none"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = [
+    "tests",
 ]

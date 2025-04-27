@@ -24,11 +24,11 @@ importers:
   runtime:
     devDependencies:
       concurrently:
-        specifier: ^8.2.2
-        version: 8.2.2
+        specifier: 9.1.2
+        version: 9.1.2
       pyright:
-        specifier: 1.1.373
-        version: 1.1.373
+        specifier: 1.1.400
+        version: 1.1.400
 
 packages:
 
@@ -97,6 +97,11 @@ packages:
   concurrently@8.2.2:
     resolution: {integrity: sha512-1dP4gpXFhei8IOtlXRE/T/4H88ElHgTiUzh71YUmtjTEHMSRS2Z/fgOxHSxxusGHogsRfxNq1vyAwxSC+EVyDg==}
     engines: {node: ^14.13.0 || >=16.0.0}
+    hasBin: true
+
+  concurrently@9.1.2:
+    resolution: {integrity: sha512-H9MWcoPsYddwbOGM6difjVwVZHl63nwMEwDJG/L7VGtuaJhb12h2caPG2tVPWs7emuYix252iGfqOyrz1GczTQ==}
+    engines: {node: '>=18'}
     hasBin: true
 
   cross-spawn@7.0.3:
@@ -257,8 +262,8 @@ packages:
     engines: {node: '>=0.10'}
     hasBin: true
 
-  pyright@1.1.373:
-    resolution: {integrity: sha512-ZJSjqnHbeZowUnuAiojZqCLeY1XVzRIc2GvMFFNy/z6YSyJXwChPDQL5Jl2bavTvXNO0ITRmMBVvoKCRN7cc3g==}
+  pyright@1.1.400:
+    resolution: {integrity: sha512-e0NFMPWhMvPn4siTAN6MsWZ6S/ePydUp1BOXbkh+8I+H+/KulnBb+2ceHNkI32nxZWalQxfUMNoGCHdGMXsmUA==}
     engines: {node: '>=14.0.0'}
     hasBin: true
 
@@ -447,6 +452,16 @@ snapshots:
       tree-kill: 1.2.2
       yargs: 17.7.2
 
+  concurrently@9.1.2:
+    dependencies:
+      chalk: 4.1.2
+      lodash: 4.17.21
+      rxjs: 7.8.1
+      shell-quote: 1.8.1
+      supports-color: 8.1.1
+      tree-kill: 1.2.2
+      yargs: 17.7.2
+
   cross-spawn@7.0.3:
     dependencies:
       path-key: 3.1.1
@@ -583,7 +598,7 @@ snapshots:
 
   pidtree@0.6.0: {}
 
-  pyright@1.1.373:
+  pyright@1.1.400:
     optionalDependencies:
       fsevents: 2.3.3
 

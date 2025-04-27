@@ -4,12 +4,8 @@ from decimal import Decimal
 from typing import (
     Any,
     Awaitable,
-    Dict,
-    List,
     Literal,
-    Optional,
     Type,
-    Union,
     cast,
 )
 
@@ -31,17 +27,17 @@ from ..json import loads as json_loads
 
 
 def SmallIntField(
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     primary_key: bool = False,
     null: bool = False,
     default: Any = None,
     unique: bool = False,
     db_index: bool = False,
-    description: Optional[str] = None,
+    description: str | None = None,
     **kwargs: Any,
 ):
     return cast(
-        Union[int, fields.IntField],
+        int | fields.IntField,
         fields.SmallIntField(
             source_field=source_field,
             primary_key=primary_key,
@@ -56,17 +52,17 @@ def SmallIntField(
 
 
 def IntField(
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     primary_key: bool = False,
     null: bool = False,
     default: Any = None,
     unique: bool = False,
     db_index: bool = False,
-    description: Optional[str] = None,
+    description: str | None = None,
     **kwargs: Any,
 ):
     return cast(
-        Union[int, fields.IntField],
+        int | fields.IntField,
         fields.IntField(
             source_field=source_field,
             primary_key=primary_key,
@@ -81,17 +77,17 @@ def IntField(
 
 
 def BigIntField(
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     primary_key: bool = False,
     null: bool = False,
     default: Any = None,
     unique: bool = False,
     db_index: bool = False,
-    description: Optional[str] = None,
+    description: str | None = None,
     **kwargs: Any,
 ):
     return cast(
-        Union[int, fields.BigIntField],
+        int | fields.BigIntField,
         fields.BigIntField(
             source_field=source_field,
             primary_key=primary_key,
@@ -109,15 +105,15 @@ BooleanField = fields.BooleanField
 
 
 def FloatField(
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     null: bool = False,
     default: Any = None,
     db_index: bool = False,
-    description: Optional[str] = None,
+    description: str | None = None,
     **kwargs: Any,
 ):
     return cast(
-        Union[float, fields.FloatField],
+        float | fields.FloatField,
         fields.FloatField(
             source_field=source_field,
             null=null,
@@ -132,15 +128,15 @@ def FloatField(
 def DecimalField(
     max_digits: int,
     decimal_places: int,
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     null: bool = False,
     default: Any = None,
     db_index: bool = False,
-    description: Optional[str] = None,
+    description: str | None = None,
     **kwargs: Any,
 ):
     return cast(
-        Union[Decimal, fields.DecimalField],
+        Decimal | fields.DecimalField,
         fields.DecimalField(
             max_digits=max_digits,
             decimal_places=decimal_places,
@@ -159,16 +155,16 @@ CharEnumField = fields.CharEnumField
 
 
 def DateField(
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     null: bool = False,
     default: Any = None,
     unique: bool = False,
     db_index: bool = False,
-    description: Optional[str] = None,
+    description: str | None = None,
     **kwargs: Any,
 ):
     return cast(
-        Union[date, fields.DateField],
+        date | fields.DateField,
         fields.DateField(
             source_field=source_field,
             null=null,
@@ -191,13 +187,13 @@ ManyToManyRelation = relational.ManyToManyRelation
 
 
 def TextField(
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     default: Any = None,
-    description: Optional[str] = None,
+    description: str | None = None,
     **kwargs: Any,
 ):
     return cast(
-        Union[str, fields.TextField],
+        str | fields.TextField,
         fields.TextField(
             source_field=source_field,
             default=default,
@@ -210,9 +206,9 @@ def TextField(
 class _LocalDatetimeField(DatetimeField):
     def to_db_value(
         self,
-        value: Optional[DatetimeFieldQueryValueType],
-        instance: Union[Type[Model], Model],
-    ) -> Optional[DatetimeFieldQueryValueType]:
+        value: DatetimeFieldQueryValueType | None,
+        instance: Type[Model] | Model,
+    ) -> DatetimeFieldQueryValueType | None:
         value = super().to_db_value(value, instance)
         if (
             value
@@ -227,16 +223,16 @@ class _LocalDatetimeField(DatetimeField):
 def LocalDatetimeField(
     auto_now: bool = False,
     auto_now_add: bool = False,
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     null: bool = False,
     default: Any = None,
     unique: bool = False,
     db_index: bool = False,
-    description: Optional[str] = None,
+    description: str | None = None,
     **kwargs: Any,
 ):
     return cast(
-        Union[DatetimeField, datetime],
+        DatetimeField | datetime,
         _LocalDatetimeField(
             auto_now=auto_now,
             auto_now_add=auto_now_add,
@@ -260,15 +256,15 @@ class TimeField(fields.TimeField):
 
 
 def JSONField(
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     default: Any = None,
-    description: Optional[str] = None,
+    description: str | None = None,
     encoder: JsonDumpsFunc = fast_dumps,
     decoder: JsonLoadsFunc = json_loads,
     **kwargs: Any,
 ):
     return cast(
-        Dict[str, Any],
+        dict[str, Any],
         fields.JSONField(
             source_field=source_field,
             default=default,
@@ -281,15 +277,15 @@ def JSONField(
 
 
 def JSONListField(
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     default: Any = None,
-    description: Optional[str] = None,
+    description: str | None = None,
     encoder: JsonDumpsFunc = fast_dumps,
     decoder: JsonLoadsFunc = json_loads,
     **kwargs: Any,
 ):
     return cast(
-        List[Any],
+        list[Any],
         fields.JSONField(
             source_field=source_field,
             default=default,
@@ -305,12 +301,12 @@ class NullableCharField(fields.CharField):
     def __init__(
         self,
         max_length: int,
-        source_field: Optional[str] = None,
+        source_field: str | None = None,
         primary_key: bool = False,
         default: Any = None,
         unique: bool = False,
         db_index: bool = False,
-        description: Optional[str] = None,
+        description: str | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(
@@ -325,33 +321,31 @@ class NullableCharField(fields.CharField):
             **kwargs,
         )
 
-    def to_python_value(self, value: Optional[str]) -> Optional[List[str]]:
+    def to_python_value(self, value: str | None) -> list[str] | None:
         if value == "":
             value = None
         return super().to_python_value(value)
 
     def to_db_value(
-        self, value: Optional[str], instance: Union[Type[Model], Model]
-    ) -> Optional[str]:
+        self, value: str | None, instance: Type[Model] | Model
+    ) -> str | None:
         if value == "":
             value = None
         return super().to_db_value(value, instance)
 
 
-class SplitCharDBField(fields.CharField, List[str]):
+class SplitCharDBField(fields.CharField, list[str]):
     def __init__(
         self,
         max_length: int,
-        separator: Optional[str] = None,
-        default: Optional[list[str]] = None,
+        separator: str | None = None,
+        default: list[str] | None = None,
         **kwargs: Any,
     ) -> None:
         self.separator = separator or "\n"
         super().__init__(max_length, default=default, **kwargs)
 
-    def to_python_value(
-        self, value: Optional[Union[str, List[str]]]
-    ) -> Optional[List[str]]:
+    def to_python_value(self, value: str | list[str] | None) -> list[str] | None:
         if value is None:
             return None
 
@@ -364,8 +358,8 @@ class SplitCharDBField(fields.CharField, List[str]):
         return v.split(self.separator)
 
     def to_db_value(
-        self, value: Optional[List[str]], instance: Union[Type[Model], Model]
-    ) -> Optional[str]:
+        self, value: list[str] | None, instance: Type[Model] | Model
+    ) -> str | None:
         if value is None:
             return None
 
@@ -382,15 +376,15 @@ class SplitCharDBField(fields.CharField, List[str]):
 
 def SplitCharField(
     max_length: int,
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     null: bool = False,
-    default: Optional[list[str]] = None,
+    default: list[str] | None = None,
     db_index: bool = False,
-    description: Optional[str] = None,
+    description: str | None = None,
     **kwargs: Any,
 ):
     return cast(
-        List[str],
+        list[str],
         SplitCharDBField(
             max_length=max_length,
             source_field=source_field,
@@ -442,7 +436,7 @@ class CurrencyDBField(fields.Field[int], float):
         super().__init__(primary_key=primary_key, **kwargs)  # type: ignore
         self.multiply = multiply
 
-    def to_python_value(self, value: Optional[Union[int, float]]) -> Optional[float]:
+    def to_python_value(self, value: int | float | None) -> float | None:
         if value is None:
             return None
 
@@ -452,19 +446,19 @@ class CurrencyDBField(fields.Field[int], float):
         return float(value) / self.multiply
 
     def to_db_value(
-        self, value: Optional[float], instance: Union[Type[Model], Model]
-    ) -> Optional[int]:
+        self, value: float | None, instance: Type[Model] | Model
+    ) -> int | None:
         if value is None:
             return None
         return round(value * self.multiply)
 
 
 def CurrencyField(
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     null: bool = False,
     default: Any = None,
     db_index: bool = False,
-    description: Optional[str] = None,
+    description: str | None = None,
     **kwargs: Any,
 ):
     return cast(
@@ -513,9 +507,7 @@ class CurrencyDecimalField(fields.Field[float], float):
         def function_cast(self, term: Term) -> Term:
             return functions.Cast(term, SqlTypes.NUMERIC)
 
-    def to_python_value(
-        self, value: Optional[Union[float, Decimal]]
-    ) -> Optional[float]:
+    def to_python_value(self, value: float | Decimal | None) -> float | None:
         if value is None:
             return None
 
@@ -525,8 +517,8 @@ class CurrencyDecimalField(fields.Field[float], float):
         return float(round(value / Decimal(self.multiply), self.precision))
 
     def to_db_value(
-        self, value: Optional[float], instance: Union[Type[Model], Model]
-    ) -> Optional[Decimal]:
+        self, value: float | None, instance: Type[Model] | Model
+    ) -> Decimal | None:
         if value is None:
             return None
         return Decimal(round(value * self.multiply, self.decimal_places))
@@ -534,17 +526,17 @@ class CurrencyDecimalField(fields.Field[float], float):
 
 def CharField(
     max_length: int,
-    source_field: Optional[str] = None,
+    source_field: str | None = None,
     primary_key: bool = False,
     null: bool = False,
     default: Any = None,
     unique: bool = False,
     db_index: bool = False,
-    description: Optional[str] = None,
+    description: str | None = None,
     **kwargs: Any,
 ):
     return cast(
-        Union[fields.CharField, str],
+        fields.CharField | str,
         fields.CharField(
             max_length=max_length,
             source_field=source_field,
@@ -561,11 +553,11 @@ def CharField(
 
 def ForeignKeyField(
     model_name: str,
-    related_name: Union[Optional[str], Literal[False]] = None,
+    related_name: str | Literal[False] | None = None,
     on_delete: OnDelete = OnDelete.RESTRICT,
     db_constraint: bool = True,
     **kwargs: Any,
-) -> Union[Awaitable[Model], Model]:
+) -> Awaitable[Model] | Model:
     return fields.ForeignKeyField(  # type: ignore
         model_name=model_name,
         related_name=related_name,
@@ -577,8 +569,8 @@ def ForeignKeyField(
 
 def ManyToManyField(
     model_name: str,
-    through: Optional[str] = None,
-    forward_key: Optional[str] = None,
+    through: str | None = None,
+    forward_key: str | None = None,
     backward_key: str = "",
     related_name: str = "",
     on_delete: OnDelete = OnDelete.CASCADE,

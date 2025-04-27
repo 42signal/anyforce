@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Callable, List, Optional, Type
+from typing import Any, Callable, Type
 
 from rq.job import Retry
 from rq.registry import BaseRegistry
@@ -26,7 +26,7 @@ class Queue:
         self,
         f: Callable[..., Any],
         *args: Any,
-        retry: Optional[Retry] = ...,
+        retry: Retry | None = ...,
         **kwargs: Any,
     ) -> Any: ...
     def enqueue_at(
@@ -34,7 +34,7 @@ class Queue:
         datetime: datetime,
         f: Callable[..., Any],
         *args: Any,
-        retry: Optional[Retry] = ...,
+        retry: Retry | None = ...,
         **kwargs: Any,
     ) -> Any: ...
     def enqueue_in(
@@ -42,7 +42,7 @@ class Queue:
         time_delta: timedelta,
         f: Callable[..., Any],
         *args: Any,
-        retry: Optional[Retry] = ...,
+        retry: Retry | None = ...,
         **kwargs: Any,
     ) -> Any: ...
-    def enqueue_many(self, job_datas: List[Any], pipeline: Any = ...) -> List[Any]: ...
+    def enqueue_many(self, job_datas: list[Any], pipeline: Any = ...) -> list[Any]: ...

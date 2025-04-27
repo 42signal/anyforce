@@ -1,7 +1,7 @@
 import asyncio
 import inspect
 from contextlib import asynccontextmanager
-from typing import Any, Callable, Dict, List, Literal, Sequence
+from typing import Any, Callable, Literal, Sequence
 
 from fastapi import FastAPI, HTTPException, status
 from starlette.middleware.cors import CORSMiddleware
@@ -15,8 +15,8 @@ from .model import init
 
 def create_app(
     secret_key: str,
-    allow_origins: List[str],
-    tortoise_config: Dict[str, Any],
+    allow_origins: list[str],
+    tortoise_config: dict[str, Any],
     max_age: int = 14 * 24 * 60 * 60,
     same_site: Literal["lax", "strict", "none"] = "lax",
     https_only: bool = True,
@@ -42,7 +42,7 @@ def create_app(
 
     app = FastAPI(lifespan=lifespan)
 
-    state: List[bool] = [True]
+    state: list[bool] = [True]
 
     app.add_middleware(RawContextMiddleware)
     app.add_middleware(

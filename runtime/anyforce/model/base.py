@@ -6,11 +6,8 @@ from typing import (
     Any,
     Callable,
     Dict,
-    List,
     Literal,
     Optional,
-    Set,
-    Tuple,
     Type,
     Union,
     cast,
@@ -61,31 +58,31 @@ class BaseModel(Model):
         config: ConfigDict = ConfigDict(
             from_attributes=True, arbitrary_types_allowed=True
         )
-        validators: Optional[Dict[str, Callable[..., Any]]] = None
-        include: Tuple[str, ...] = tuple()
-        exclude: Tuple[str, ...] = tuple()
-        computed: Tuple[str, ...] = tuple()  # 计算量
-        form_exclude: Tuple[str, ...] = tuple()  # 表单排除
-        list_exclude: Tuple[str, ...] = tuple()  # 列表排除
+        validators: dict[str, Callable[..., Any]] | None = None
+        include: tuple[str, ...] = tuple()
+        exclude: tuple[str, ...] = tuple()
+        computed: tuple[str, ...] = tuple()  # 计算量
+        form_exclude: tuple[str, ...] = tuple()  # 表单排除
+        list_exclude: tuple[str, ...] = tuple()  # 列表排除
         max_recursion = 1
 
     class FormPydanticMeta(PydanticMeta):
-        computed: Tuple[str, ...] = tuple()  # set_{property} 函数
+        computed: tuple[str, ...] = tuple()  # set_{property} 函数
 
     def dict(
         self,
         mode: Literal["json", "python"] = "python",
-        include: Optional[Union[Set[int], Set[str]]] = None,
-        exclude: Optional[Union[Set[int], Set[str]]] = None,
-        context: Optional[Any] = None,
+        include: set[int] | set[str] | None = None,
+        exclude: set[int] | set[str] | None = None,
+        context: Any | None = None,
         by_alias: bool = False,
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         round_trip: bool = False,
-        warnings: Union[bool, Literal["none", "warn", "error"]] = True,
+        warnings: bool | Literal["none", "warn", "error"] = True,
         serialize_as_any: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         return (
             self.detail()
             .model_validate(self)
@@ -107,8 +104,8 @@ class BaseModel(Model):
     @classmethod
     async def update_or_create(
         cls,
-        defaults: Optional[Dict[str, Any]] = None,
-        using_db: Optional[BaseDBAsyncClient] = None,
+        defaults: Dict[str, Any] | None = None,
+        using_db: BaseDBAsyncClient | None = None,
         **kwargs: Any,
     ):
         return await super().update_or_create(  # pyright: ignore[reportUnknownMemberType]
@@ -136,8 +133,8 @@ class BaseModel(Model):
     @lru_cache
     def detail(
         cls,
-        required_override: Optional[bool] = False,
-        from_models: Tuple[str, ...] = (),
+        required_override: bool | None = False,
+        from_models: tuple[str, ...] = (),
     ) -> Type[PydanticModel]:
         return cls.make_pydantic(
             name="detail",
@@ -149,11 +146,11 @@ class BaseModel(Model):
     @lru_cache
     def form(
         cls,
-        required_override: Optional[bool] = None,
-        from_models: Tuple[str, ...] = (),
+        required_override: bool | None = None,
+        from_models: tuple[str, ...] = (),
     ) -> Type[PydanticModel]:
         meta = cls.PydanticMeta
-        form_exclude: Tuple[str, ...] = meta.form_exclude
+        form_exclude: tuple[str, ...] = meta.form_exclude
         return cls.make_pydantic(
             name="form",
             exclude=(
@@ -174,11 +171,11 @@ class BaseModel(Model):
     def make_pydantic(
         cls,
         name: str,
-        include: Optional[Tuple[str, ...]] = None,
-        exclude: Optional[Tuple[str, ...]] = None,
-        required_override: Optional[bool] = None,
-        from_models: Tuple[str, ...] = (),
-        max_recursion: Optional[int] = None,
+        include: tuple[str, ...] | None = None,
+        exclude: tuple[str, ...] | None = None,
+        required_override: bool | None = None,
+        from_models: tuple[str, ...] = (),
+        max_recursion: int | None = None,
         is_form: bool = False,
     ):
         parts = [cls.__module__, cls.__qualname__, name]
@@ -195,7 +192,7 @@ class BaseModel(Model):
         include = include if include is not None else meta.include
         exclude = exclude if exclude is not None else meta.exclude
 
-        fields: Dict[str, Any] = {}
+        fields: dict[str, Any] = {}
 
         # 处理数据库字段
         for name, field in cls.fields_map().items():
@@ -208,9 +205,7 @@ class BaseModel(Model):
                 if len(from_models) > max_recursion:
                     continue
 
-                orig_model: Optional[Type[Model]] = getattr(
-                    field, "related_model", None
-                )
+                orig_model: Type[Model] | None = getattr(field, "related_model", None)
                 assert orig_model
 
                 if isinstance(field, BackwardFKRelation) and is_form:
@@ -218,7 +213,7 @@ class BaseModel(Model):
 
                 if isinstance(field, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
                     fields[f"{name}_id"] = (
-                        int if field.null else Optional[int],
+                        int if field.null else int | None,
                         FieldInfo(
                             default=(
                                 None
@@ -251,7 +246,7 @@ class BaseModel(Model):
                 if isinstance(field, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
                     fields[name] = (
                         Annotated[
-                            Optional[field_pydantic_model],
+                            field_pydantic_model | None,
                             BeforeValidator(BaseModel.validate_relation),
                         ],
                         FieldInfo(title=field.description, default=None),
@@ -262,7 +257,7 @@ class BaseModel(Model):
                 ):
                     fields[name] = (
                         Annotated[
-                            Optional[List[field_pydantic_model]],
+                            list[field_pydantic_model] | None,
                             BeforeValidator(BaseModel.validate_relations),
                         ],
                         FieldInfo(title=field.description, default=None),
@@ -291,7 +286,7 @@ class BaseModel(Model):
 
             f_kwargs: dict[str, Any] = {}
             if isinstance(field, SplitCharDBField):
-                type_hint = List[str]
+                type_hint = list[str]
             elif isinstance(field, (CurrencyDBField, tortoise_fields.DecimalField)):
                 type_hint = float
             elif isinstance(field, tortoise_fields.TimeField):
@@ -397,7 +392,7 @@ class BaseModel(Model):
         elif isinstance(v, list):
             v = [
                 (e.list().model_validate(e) if isinstance(e, BaseModel) else e)
-                for e in cast(List[Any], v)
+                for e in cast(list[Any], v)
             ]
         return v
 
@@ -420,19 +415,21 @@ class BaseModel(Model):
 
     @classmethod
     def process(cls, input: Any):
-        dic: Dict[str, Any] = (
-            input if isinstance(input, dict) else input.model_dump(exclude_unset=True)
+        dic: dict[str, Any] = (
+            cast(dict[str, Any], input)
+            if isinstance(input, dict)
+            else input.model_dump(exclude_unset=True)
         )
 
         # 处理计算量
-        computed: Dict[str, Any] = {}
+        computed: dict[str, Any] = {}
         for field in cls.FormPydanticMeta.computed:
             if field not in dic:
                 continue
             computed[field] = dic.pop(field)
 
         # 处理 m2m
-        m2ms: Dict[str, Any] = {}
+        m2ms: dict[str, Any] = {}
         for m2m_field in cls._meta.m2m_fields:
             values = dic.pop(m2m_field, None)
             if values is None:
@@ -481,10 +478,10 @@ class BaseModel(Model):
                 await m2m.add(value)
 
     async def fetch_related(
-        self, *args: Any, using_db: Optional[BaseDBAsyncClient] = None
+        self, *args: Any, using_db: BaseDBAsyncClient | None = None
     ) -> None:
         meta = self.PydanticMeta
-        computed: Set[str]
+        computed: set[str]
         if meta and hasattr(meta, "computed"):
             computed = set(meta.computed)
             for field in args:
@@ -508,8 +505,8 @@ class BaseModel(Model):
         return await super().fetch_related(*normalized_args, using_db=using_db)
 
     async def fetch_related_lazy(
-        self, path: str, using_db: Optional[BaseDBAsyncClient] = None
-    ) -> Optional[Any]:
+        self, path: str, using_db: BaseDBAsyncClient | None = None
+    ) -> Any | None:
         instance = getattr(self, path)
         if isinstance(instance, Model):
             return instance
@@ -523,8 +520,8 @@ class BaseModel(Model):
 
     @classmethod
     @lru_cache
-    def get_model(cls, model_name: str) -> Optional[Type[Model]]:
-        parts: List[str] = model_name.split(".")
+    def get_model(cls, model_name: str) -> Type[Model] | None:
+        parts: list[str] = model_name.split(".")
         if len(parts) == 1:
             for app in Tortoise.apps:
                 m = cls.get_model(f"{app}.{model_name}")
@@ -532,7 +529,7 @@ class BaseModel(Model):
                     return m
             return None
         return cast(
-            Optional[Type[BaseModel]],
+            Type[BaseModel] | None,
             Tortoise.apps.get(parts[0], {}).get(parts[1], None),
         )
 
@@ -540,11 +537,11 @@ class BaseModel(Model):
     @lru_cache
     def get_field(
         cls, model_name: str, field_name: str
-    ) -> Tuple[Optional[Type[Model]], Optional[Field[Any]]]:
+    ) -> tuple[Type[Model] | None, Field[Any] | None]:
         model = cls.get_model(model_name)
         if model:
             model_meta = getattr(model, "_meta")
-            fields_map: Dict[str, Field[Any]] = (
+            fields_map: dict[str, Field[Any]] = (
                 getattr(model_meta, "fields_map") if model_meta else {}
             )
             field = fields_map.get(field_name)

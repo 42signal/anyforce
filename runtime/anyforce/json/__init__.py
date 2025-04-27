@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, cast
 
 import orjson
 from dateutil.parser import parse as parse_datetime
@@ -28,8 +28,8 @@ def dumps(
     check_circular: bool = False,
     allow_nan: bool = False,
     cls: Any = None,
-    indent: Optional[int] = None,
-    separators: Optional[Tuple[str, str]] = None,
+    indent: int | None = None,
+    separators: tuple[str, str] | None = None,
     default: Any = jsonable_encoder,
     sort_keys: bool = False,
 ) -> str:
@@ -47,11 +47,11 @@ def parse_iso_datetime(s: str) -> datetime:
 
 def decoder(input: Any) -> Any:
     if isinstance(input, dict):
-        input = cast(Dict[Any, Any], input)
+        input = cast(dict[Any, Any], input)
         for k, v in input.items():
             input[k] = decoder(v)
-    elif isinstance(input, List):
-        input = cast(List[Any], input)
+    elif isinstance(input, list):
+        input = cast(list[Any], input)
         for i, v in enumerate(input):
             input[i] = decoder(v)
     elif isinstance(input, str) and input.find("T") == 10:
@@ -62,6 +62,6 @@ def decoder(input: Any) -> Any:
     return input
 
 
-def loads(raw: Union[bytes, bytearray, str]):
+def loads(raw: bytes | bytearray | str):
     o = orjson.loads(raw)
     return decoder(o)

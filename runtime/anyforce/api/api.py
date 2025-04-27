@@ -3,19 +3,14 @@ from copy import copy
 from datetime import datetime
 from enum import IntEnum
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Coroutine,
-    Dict,
     Generic,
     Iterable,
-    List,
-    Optional,
-    Set,
-    Tuple,
     Type,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -54,7 +49,7 @@ class ResourceMethod(IntEnum):
 
 
 class DeleteResponse(PydanticBaseModel):
-    id: Optional[Union[str, int]] = None
+    id: str | int | None = None
 
 
 class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
@@ -63,9 +58,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         model: Type[Model],
         create_form: Type[CreateForm],
         update_form: Type[UpdateForm],
-        get_current_user: Callable[
-            ..., Union[Coroutine[Any, Any, UserModel], UserModel]
-        ],
+        get_current_user: Callable[..., Coroutine[Any, Any, UserModel] | UserModel],
         enable_create: bool = True,
         enable_update: bool = True,
         enable_delete: bool = True,
@@ -88,7 +81,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
     def translate_order_by(
         self, user: UserModel, ordering: str, request: Request
-    ) -> List[str]:
+    ) -> list[str]:
         return [self.model.normalize_field(ordering)]
 
     async def translate_condition(
@@ -96,9 +89,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     ) -> Any:
         return v
 
-    def group_by_f(
-        self, group_by: str, field: Field[Any]
-    ) -> Optional[Union[Function, Term]]:
+    def group_by_f(self, group_by: str, field: Field[Any]) -> Function | Term | None:
         return None
 
     def group_by(
@@ -106,13 +97,13 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         user: UserModel,
         q: QuerySet[Model],
         include: Iterable[str],
-        group_by: List[str],
-        order_by: List[str],
+        group_by: list[str],
+        order_by: list[str],
     ):
         model_meta: MetaInfo = getattr(q.model, "_meta")
-        fields_map: Dict[str, Field[Any]] = getattr(model_meta, "fields_map")
+        fields_map: dict[str, Field[Any]] = getattr(model_meta, "fields_map")
         field_names: Iterable[str] = include or fields_map.keys()
-        annotates: Dict[str, Union[Function, Term]] = {}
+        annotates: dict[str, Function | Term] = {}
         for field_name in field_names:
             if field_name in group_by:
                 continue
@@ -138,9 +129,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         user: UserModel,
         q: QuerySet[Model],
         include: Iterable[str],
-        group_by: List[str],
-        order_by: List[str] = [],
-    ) -> List[Model]:
+        group_by: list[str],
+        order_by: list[str] = [],
+    ) -> list[Model]:
         return await self.grouping_q(
             self.group_by(user, q, include, group_by, order_by), group_by
         )
@@ -148,10 +139,14 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     async def grouping_q(
         self,
         q: QuerySet[Model],
-        group_by: List[str],
-    ) -> List[Model]:
-        dicts = await q.values(*set(group_by).union(getattr(q, "_annotations").keys()))
-        es: List[Model] = []
+        group_by: list[str],
+    ) -> list[Model]:
+        group_q = q.filter()
+        setattr(group_q, "_fields_for_select", tuple())
+        dicts = await group_q.values(
+            *set(group_by).union(getattr(q, "_annotations").keys())
+        )
+        es: list[Model] = []
         # overwrite default value
         kwargs: dict[str, str] = {}
         for k, field in self.model.fields_map().items():
@@ -167,7 +162,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             es.append(e)
         return es
 
-    async def excludes(self, method: ResourceMethod) -> Optional[Set[str]]:
+    async def excludes(self, method: ResourceMethod) -> set[str] | None:
         return None
 
     async def q(
@@ -180,10 +175,10 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         excludes = await self.excludes(method)
         if excludes:
             model_meta = getattr(q.model, "_meta")
-            fields_db_projection: Dict[str, Any] = (
+            fields_db_projection: dict[str, Any] = (
                 getattr(model_meta, "fields_db_projection") if model_meta else {}
             )
-            include: Set[str] = (
+            include: set[str] = (
                 set(
                     getattr(q, "_fields_for_select", None)
                     or fields_db_projection.keys()
@@ -196,7 +191,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         return q
 
     async def fetch_related(
-        self, obj: Model, method: ResourceMethod, prefetch: List[str]
+        self, obj: Model, method: ResourceMethod, prefetch: list[str]
     ):
         excludes = await self.excludes(method)
         if excludes:
@@ -230,7 +225,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
     async def before_update(
         self, user: UserModel, obj: Model, input: UpdateForm, request: Request
-    ) -> Optional[Model]:
+    ) -> Model | None:
         return obj
 
     async def after_update(
@@ -305,27 +300,27 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         return objs
 
     async def translate_kv_condition(
-        self, user: UserModel, request: Request, q: QuerySet[Model], kv: Dict[str, Any]
+        self, user: UserModel, request: Request, q: QuerySet[Model], kv: dict[str, Any]
     ) -> tuple[QuerySet[Model], Q]:
-        join_infos: Dict[str, Tuple[str, bool]] = {
+        join_infos: dict[str, tuple[str, bool]] = {
             ".and": (Q.AND, False),
             ".or": (Q.OR, False),
             ".not": (Q.AND, True),
             ".not_or": (Q.OR, True),
         }
 
-        qs: List[Q] = []
-        q_kwargs: Dict[str, Any] = {}
+        qs: list[Q] = []
+        q_kwargs: dict[str, Any] = {}
         for k, v in kv.items():
             child_join_type, child_reverse = join_infos.get(k, ("", False))
             if child_join_type:
                 if isinstance(v, dict):
                     q, iq = await self.translate_kv_condition(
-                        user, request, q, cast(Dict[str, Any], v)
+                        user, request, q, cast(dict[str, Any], v)
                     )
                 elif isinstance(v, list):
-                    cqs: List[Q] = []
-                    for cv in cast(List[Dict[str, Any]], v):
+                    cqs: list[Q] = []
+                    for cv in cast(list[dict[str, Any]], v):
                         q, ciq = await self.translate_kv_condition(
                             user,
                             request,
@@ -362,22 +357,23 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         return q, kv_q
 
     def bind(self, router: APIRouter):
-        list_exclude: Set[str] = set(self.model.PydanticMeta.list_exclude or [])
+        list_exclude: set[str] = set(self.model.PydanticMeta.list_exclude or [])
+        if not TYPE_CHECKING:
+            CreateForm = self.create_form
+            UpdateForm = self.update_form
         ListPydanticModel = self.model.list()
         DetailPydanticModel = self.model.detail()
-        CreateForm = self.create_form
-        UpdateForm = self.update_form
 
-        DetailPydanticModels = Union[List[DetailPydanticModel], DetailPydanticModel]
+        DetailPydanticModels = list[DetailPydanticModel] | DetailPydanticModel
         Response = create_model(
             f"{self.model.__module__}.{self.model.__name__}.Response",
             __base__=PydanticBaseModel,
             total=(int, 0),
-            summary=(Optional[ListPydanticModel], ...),
-            data=(List[ListPydanticModel], ...),
+            summary=(ListPydanticModel | None, ...),
+            data=(list[ListPydanticModel], ...),
         )
 
-        methods: Dict[str, Callable[..., Any]] = {}
+        methods: dict[str, Callable[..., Any]] = {}
 
         if self.enable_create:
 
@@ -391,17 +387,17 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             )
             async def create(
                 request: Request,
-                input: Union[List[CreateForm], CreateForm] = self.get_form_type(
-                    CreateForm
+                input: list[CreateForm] | CreateForm = self.get_form_type(
+                    self.create_form
                 ),
-                prefetch: List[str] = self.prefetch_query(),
+                prefetch: list[str] = self.prefetch_query(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
                 async with in_transaction(self.connection_name):
                     is_batch = isinstance(input, list)
-                    inputs = cast(List[CreateForm], input if is_batch else [input])
+                    inputs = input if is_batch else [input]
 
-                    returns: List[PydanticBaseModel] = []
+                    returns: list[PydanticBaseModel] = []
                     for input in inputs:
                         input = await self.before_create(current_user, input, request)
                         raw, computed, m2ms = self.model.process(input)
@@ -493,15 +489,15 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 offset: int = Query(0, title="分页偏移"),
                 limit: int = Query(20, title="分页限额"),
                 include_summary: bool = Query(False, title="是否包含summary数据"),
-                condition: List[str] = Query([], title="查询条件", description=help),
-                order_by: List[str] = Query(
+                condition: list[str] = Query([], title="查询条件", description=help),
+                order_by: list[str] = Query(
                     [],
                     title="排序",
                     description="支持采用 `order_by=id&order_by=user.id` 形式传入多个",
                 ),
-                include: List[str] = self.include_query(),
-                prefetch: List[str] = self.prefetch_query(),
-                group_by: List[str] = self.group_by_query(),
+                include: list[str] = self.include_query(),
+                prefetch: list[str] = self.prefetch_query(),
+                group_by: list[str] = self.group_by_query(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
                 q = self.model.all()
@@ -524,7 +520,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                         )
                         q = q.filter(iq)
 
-                summary: Optional[Model] = None
+                summary: Model | None = None
                 include_summary = self.enable_summary and include_summary
                 if include_summary:
                     objs = await self.grouping(current_user, q, include, [])
@@ -535,16 +531,16 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     group_by_fields = ",".join(
                         [f"COALESCE(`{field}`, '')" for field in group_by]
                     )
-                    r = await (
-                        q.annotate(total=RawSQL(f"COUNT(DISTINCT {group_by_fields})"))
-                        .group_by()
-                        .values("total")
-                    )
+                    total_q = q.annotate(
+                        total=RawSQL(f"COUNT(DISTINCT {group_by_fields})")
+                    ).group_by()
+                    setattr(total_q, "_fields_for_select", tuple())
+                    r = await total_q.values("total")
                     total = r[0]["total"] if r else 0
                 else:
-                    r = await q.annotate(total=Count("id", distinct=True)).values(
-                        "total"
-                    )
+                    total_q = q.annotate(total=Count("id", distinct=True))
+                    setattr(total_q, "_fields_for_select", tuple())
+                    r = await total_q.values("total")
                     total = r[0]["total"] if r else 0
                     q = q.distinct()
 
@@ -552,7 +548,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 if group_by:
                     q = self.group_by(current_user, q, include, group_by, order_by)
                 if order_by:
-                    orderings: List[str] = []
+                    orderings: list[str] = []
                     for item in order_by:
                         orderings += self.translate_order_by(
                             current_user, item, request
@@ -586,7 +582,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             async def get(
                 request: Request,
                 id: str = Path(..., title="id"),
-                prefetch: List[str] = self.prefetch_query(),
+                prefetch: list[str] = self.prefetch_query(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
                 id = await self.translate_id(current_user, id, request)
@@ -618,12 +614,12 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             async def update(
                 request: Request,
                 ids: str = self.ids_path(),
-                input: UpdateForm = self.get_form_type(UpdateForm),
-                prefetch: List[str] = self.prefetch_query(),
+                input: UpdateForm = self.get_form_type(self.update_form),
+                prefetch: list[str] = self.prefetch_query(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
                 async with in_transaction(self.connection_name):
-                    returns: List[Any] = []
+                    returns: list[Any] = []
                     excludes = await self.excludes(ResourceMethod.put)
                     for obj in await self.get(
                         ids, current_user, request, ResourceMethod.put
@@ -639,7 +635,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                                 if isinstance(updated_at, str):
                                     updated_at = json.parse_iso_datetime(updated_at)
                                 if isinstance(updated_at, datetime):
-                                    obj_updated_at: Optional[datetime] = getattr(
+                                    obj_updated_at: datetime | None = getattr(
                                         obj, "updated_at", None
                                     )
                                     if obj_updated_at:
@@ -686,7 +682,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
             @router.delete(
                 "/{ids}",
-                response_model=Union[List[DeleteResponse], DeleteResponse],
+                response_model=list[DeleteResponse] | DeleteResponse,
                 response_class=ORJSONResponse,
                 response_model_exclude_unset=True,
                 response_model_exclude_none=True,
@@ -695,9 +691,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 request: Request,
                 ids: str = self.ids_path(),
                 current_user: UserModel = Depends(self.get_current_user),
-            ) -> Union[List[DeleteResponse], DeleteResponse]:
+            ) -> list[DeleteResponse] | DeleteResponse:
                 async with in_transaction(self.connection_name):
-                    rs: List[DeleteResponse] = []
+                    rs: list[DeleteResponse] = []
                     for obj in await self.get(
                         ids, current_user, request, ResourceMethod.delete
                     ):

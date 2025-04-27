@@ -1,6 +1,6 @@
 import logging
 from functools import cached_property
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, cast
+from typing import Any, Callable, Iterable, cast
 
 from faker import Faker
 from fastapi import APIRouter
@@ -13,10 +13,10 @@ logger = logging.getLogger()
 
 
 TestConfigs = Iterable[
-    Tuple[
-        Dict[str, Any],
+    tuple[
+        dict[str, Any],
         int,
-        Optional[Callable[[Dict[str, Any], Any], None]],
+        Callable[[dict[str, Any], Any], None] | None,
     ]
 ]
 
@@ -74,7 +74,11 @@ class TestAPI:
 
                 # validate prefetch
                 prefetch: Any = params.get("prefetch", [])
-                prefetch = prefetch if isinstance(prefetch, list) else [prefetch]
+                prefetch = (
+                    cast(list[str], prefetch)
+                    if isinstance(prefetch, list)
+                    else [prefetch]
+                )
                 for k in prefetch:
                     exist = False
                     for e in r["data"]:
@@ -113,7 +117,11 @@ class TestAPI:
 
                 # validate prefetch
                 prefetch: Any = params.get("prefetch", [])
-                prefetch = prefetch if isinstance(prefetch, list) else [prefetch]
+                prefetch = (
+                    cast(list[str], prefetch)
+                    if isinstance(prefetch, list)
+                    else [prefetch]
+                )
                 for k in prefetch:
                     assert obj.get(k) is not None
 
@@ -193,23 +201,23 @@ class TestAPI:
 
     @staticmethod
     def log_compare(lv: Any, rv: Any):
-        diff: Dict[str, Any] = {}
+        diff: dict[str, Any] = {}
         r = TestAPI.compare(lv, rv, "", diff)
         if not r:
             logger.info(f"not equal: {diff}")
         assert r
 
     @staticmethod
-    def compare(lv: Any, rv: Any, path: str, diff: Dict[str, Any]):
+    def compare(lv: Any, rv: Any, path: str, diff: dict[str, Any]):
         if isinstance(lv, dict) and isinstance(rv, dict):
-            lv = cast(Dict[str, Any], lv)
-            rv = cast(Dict[str, Any], rv)
+            lv = cast(dict[str, Any], lv)
+            rv = cast(dict[str, Any], rv)
             for k, v in rv.items():
                 if not TestAPI.compare(lv.get(k), v, f"{path}.{k}", diff):
                     return False
             return True
         if isinstance(lv, list) and isinstance(rv, list):
-            rv = cast(List[Any], rv)
+            rv = cast(list[Any], rv)
             for i, v in enumerate(rv):
                 if not TestAPI.compare(lv[i], v, f"{path}.{i}", diff):
                     return False

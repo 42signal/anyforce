@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union, cast
+from typing import Any, Match, cast
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError, ValidationException
@@ -107,12 +107,12 @@ validation_error_translation: dict[str, str] = {
 
 
 def translate_validation_exception(e: ValidationException):
-    msgs: Set[str] = set()
+    msgs = set[str]()
     for child_e in e.errors():
         if isinstance(child_e, ValidationError):
             msgs = msgs.union(translate_validation_error(child_e))
         elif isinstance(child_e, dict):
-            msgs.add(translate_validation_error_detail(cast(Dict[str, Any], child_e)))
+            msgs.add(translate_validation_error_detail(cast(dict[str, Any], child_e)))
         else:
             msgs.add(str(child_e))
             logger.bind(e=child_e, raw_error_type=type(child_e)).warn("not translate")
@@ -120,7 +120,7 @@ def translate_validation_exception(e: ValidationException):
 
 
 def translate_validation_error(e: ValidationError):
-    msgs: Set[str] = set()
+    msgs = set[str]()
     for error in e.errors():
         msgs.add(translate_validation_error_detail(error))
     return msgs
@@ -142,9 +142,9 @@ def translate_validation_error_detail(e: dict[str, Any] | ErrorDetails):
     return f"{value} {msg}: {path}"
 
 
-def translate_validate_error(e: Union[ValidationError, List[ValidationError]]):
-    msgs: Set[str] = set()
-    errors: List[Any] = e if isinstance(e, List) else [e]
+def translate_validate_error(e: ValidationError | list[ValidationError]):
+    msgs = set[str]()
+    errors: list[Any] = e if isinstance(e, list) else [e]
     for error in errors:
         msgs = msgs.union(translate_validation_error(error))
     return list(msgs)
@@ -152,16 +152,16 @@ def translate_validate_error(e: Union[ValidationError, List[ValidationError]]):
 
 def translate_orm_error(
     e: exceptions.BaseORMException,
-) -> Tuple[int, List[str]]:
+) -> tuple[int, list[str]]:
     if isinstance(e, exceptions.IntegrityError):
         status_code = status.HTTP_400_BAD_REQUEST
-        args: List[str] = []
+        args: list[str] = []
         for arg in e.args:
             regexps = [
                 ".*Duplicate entry '(.+)' for key.*",
                 "UNIQUE constraint failed: .*",
             ]
-            matched: Optional[Match[str]] = None
+            matched: Match[str] | None = None
             for regexp in regexps:
                 matched = re.match(regexp, str(arg))
                 if matched:
@@ -183,14 +183,14 @@ def translate_orm_error(
 
 def handlers():
     async def valueExceptionHandle(
-        request: Optional[Request], exc: ValueError
+        request: Request | None, exc: ValueError
     ) -> ORJSONResponse:
         msg = str(exc)
         regexps = [
             (r"invalid literal for int\(\) with base 10: '(.+)'", "{0} 不是有效的整数"),
             ("could not convert string to float: '(.+)'", "{0} 不是有效的浮点数"),
         ]
-        matched: Optional[Match[str]] = None
+        matched: Match[str] | None = None
         for regexp, msg_template in regexps:
             matched = re.match(regexp, msg)
             if matched:
@@ -205,7 +205,7 @@ def handlers():
         )
 
     async def validationExceptionHandle(
-        request: Optional[Request], exc: ValidationException
+        request: Request | None, exc: ValidationException
     ) -> ORJSONResponse:
         return ORJSONResponse(
             {"detail": {"errors": translate_validation_exception(exc)}},
@@ -213,7 +213,7 @@ def handlers():
         )
 
     async def validationErrorHandle(
-        request: Optional[Request], exc: ValidationError
+        request: Request | None, exc: ValidationError
     ) -> ORJSONResponse:
         return ORJSONResponse(
             {"detail": {"errors": translate_validate_error(exc)}},
@@ -221,7 +221,7 @@ def handlers():
         )
 
     async def ormException(
-        request: Optional[Request], exc: exceptions.BaseORMException
+        request: Request | None, exc: exceptions.BaseORMException
     ) -> ORJSONResponse:
         status_code, msgs = translate_orm_error(exc)
         return ORJSONResponse(
@@ -230,7 +230,7 @@ def handlers():
         )
 
     async def enumMissingErrorHandle(
-        request: Optional[Request], exc: EnumMissingError
+        request: Request | None, exc: EnumMissingError
     ) -> ORJSONResponse:
         return ORJSONResponse(
             {"detail": {"errors": [str(args) for args in exc.args]}},

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Callable, Coroutine, Dict, Optional, Union, cast
+from typing import Any, Callable, Coroutine, cast
 
 from dateutil.parser import parse
 from fastapi import Path, Query, Request
@@ -25,8 +25,8 @@ logger = get_logger(__name__)
 async def update(
     app: str,
     model: str,
-    q: Dict[str, Any],
-    form: Dict[str, Any],
+    q: dict[str, Any],
+    form: dict[str, Any],
 ):
     logger.bind(app=app, model=model, q=q, form=form).info("update")
     model_cls = Tortoise.apps[app][model]
@@ -54,7 +54,7 @@ class Scheduler(object):
     def bind(
         self,
         router: APIRouter,
-        depend: Callable[..., Union[Coroutine[Any, Any, Any], Any]],
+        depend: Callable[..., Coroutine[Any, Any, Any] | Any],
     ):
         @router.get("/", response_class=ORJSONResponse)
         async def list(
@@ -66,7 +66,7 @@ class Scheduler(object):
             _: Any = Depends(depend),
         ) -> Response:
             return await self.worker.list(
-                offset, limit, cast(Dict[str, str], loads(condition))
+                offset, limit, cast(dict[str, str], loads(condition))
             )
 
         @router.delete("/{id}", response_class=ORJSONResponse)
@@ -86,7 +86,7 @@ class Scheduler(object):
         obj: Model,
         input: PydanticBaseModel,
         request: Request,
-    ) -> Optional[Model]:
+    ) -> Model | None:
         schedule_at = request.query_params.get(self.schedule_update_at_key)
 
         if schedule_at:
