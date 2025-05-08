@@ -18,11 +18,13 @@ from fastapi import APIRouter, Body, Depends, Path, Query, Request, status
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import create_model
+from pypika_tortoise.functions import Count
+from pypika_tortoise.terms import Field as pikaField
 from pypika_tortoise.terms import Term
 from tortoise.expressions import Function, Q, RawSQL
 from tortoise.fields.base import Field
 from tortoise.models import MetaInfo
-from tortoise.queryset import QuerySet
+from tortoise.queryset import CountQuery, QuerySet
 
 from .. import json
 from ..model import BaseModel
@@ -537,7 +539,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     r = await total_q.values("total")
                     total = r[0]["total"] if r else 0
                 else:
-                    total = await q.count()
+                    total = await DistinctCountQuery(q.count())
                     q = q.distinct()
 
                 q = q.offset(offset).limit(limit)
@@ -727,4 +729,29 @@ class PublicAPI(API[str, Model, CreateForm, UpdateForm]):
             enable_update=enable_update,
             enable_delete=enable_delete,
             enable_get=enable_get,
+        )
+
+
+class DistinctCountQuery(CountQuery):
+    def __init__(self, q: CountQuery) -> None:
+        super().__init__(
+            q.model,  # type: ignore
+            q._db,
+            q._q_objects,
+            q._annotations,
+            q._custom_filters,
+            q._limit,
+            q._offset,
+            q._force_indexes,
+            q._use_indexes,
+        )
+
+    def _make_query(self) -> None:
+        super()._make_query()
+        setattr(
+            self.query,
+            "_selects",
+            [
+                Count(pikaField("id", table=self.model._meta.basetable)).distinct()  # type: ignore
+            ],
         )
