@@ -1,6 +1,6 @@
 [project]
 name = "anyforce"
-version = "0.44.2"
+version = "0.44.3"
 description = ""
 authors = [
     {name = "exherb", email = "i@4leaf.me"},

@@ -21,7 +21,6 @@ from pydantic import create_model
 from pypika_tortoise.terms import Term
 from tortoise.expressions import Function, Q, RawSQL
 from tortoise.fields.base import Field
-from tortoise.functions import Count
 from tortoise.models import MetaInfo
 from tortoise.queryset import QuerySet
 
@@ -538,10 +537,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     r = await total_q.values("total")
                     total = r[0]["total"] if r else 0
                 else:
-                    total_q = q.annotate(total=Count("id", distinct=True))
-                    setattr(total_q, "_fields_for_select", tuple())
-                    r = await total_q.values("total")
-                    total = r[0]["total"] if r else 0
+                    total = await q.count()
                     q = q.distinct()
 
                 q = q.offset(offset).limit(limit)
