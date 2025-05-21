@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import IntEnum as StdlibIntEnum
 from enum import StrEnum as StdlibStrEnum
-from typing import Any, Callable
+from typing import Any, Callable, Type
 
 
 class EnumMissingError(Exception):
@@ -12,10 +12,12 @@ class EnumMissingError(Exception):
         self.value = value
 
     @staticmethod
-    def missing(enum_type: Any, value: Any):
+    def missing(enum_type: Type[Any], value: Any):
         meta: Callable[[], Any] | None = getattr(enum_type, "meta", None)
-        label: str = getattr(meta(), "label", "") if meta else ""
-        return EnumMissingError(enum_type, value, f"{label} 不存在枚举值 {value}")
+        title: str = getattr(meta(), "title", "") if meta else ""
+        return EnumMissingError(
+            enum_type, value, f"{title or {enum_type.__name__}} 不存在枚举值 {value}"
+        )
 
 
 class IntEnum(StdlibIntEnum):
