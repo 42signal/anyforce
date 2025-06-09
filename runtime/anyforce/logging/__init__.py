@@ -34,7 +34,6 @@ shared_processors: list[structlog.typing.Processor] = [
     structlog.contextvars.merge_contextvars,
     structlog.processors.add_log_level,
     structlog.processors.StackInfoRenderer(),
-    structlog.processors.format_exc_info,
     structlog.processors.TimeStamper(),
     add_logger,
 ]
