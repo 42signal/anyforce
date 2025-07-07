@@ -637,10 +637,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                                         obj, "updated_at", None
                                     )
                                     if obj_updated_at:
+                                        # 前端不支持微妙精度
                                         obj_updated_at = obj_updated_at.replace(
-                                            microsecond=int(
-                                                str(obj_updated_at.microsecond)[:3]
-                                            )
+                                            microsecond=0
                                         )
                                         assert obj_updated_at
                                         if obj_updated_at > updated_at:
