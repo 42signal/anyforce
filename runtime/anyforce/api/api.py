@@ -639,7 +639,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                                     if obj_updated_at:
                                         obj_updated_at = obj_updated_at.replace(
                                             microsecond=int(
-                                                str(obj_updated_at.microsecond)[:3]
+                                                f"{obj_updated_at.microsecond:06d}"[:3]
                                             )
                                         )
                                         assert obj_updated_at
