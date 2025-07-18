@@ -5,7 +5,7 @@ from enum import StrEnum as StdlibStrEnum
 from typing import Any, Callable, Type
 
 
-class EnumMissingError(Exception):
+class EnumMissingError(ValueError):
     def __init__(self, enum_type: Any, value: Any, *args: Any) -> None:
         super().__init__(*args)
         self.enum_type = enum_type
