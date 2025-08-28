@@ -29,6 +29,7 @@ from tortoise.queryset import CountQuery, QuerySet
 from .. import json
 from ..model import BaseModel
 from ..model.functions import in_transaction
+from ..model.queryset import ValuesWithoutGroupByQuery
 from .exceptions import (
     HTTPForbiddenError,
     HTTPNotFoundError,
@@ -144,8 +145,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
     ) -> list[Model]:
         group_q = q.filter()
         setattr(group_q, "_fields_for_select", tuple())
-        dicts = await group_q.values(
-            *set(group_by).union(getattr(q, "_annotations").keys())
+        dicts = await ValuesWithoutGroupByQuery(
+            group_q.values(*set(group_by).union(getattr(q, "_annotations").keys()))
         )
         es: list[Model] = []
         # overwrite default value
