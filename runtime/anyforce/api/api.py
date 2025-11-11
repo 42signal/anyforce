@@ -284,19 +284,25 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         return meta.default_connection
 
     async def get(
-        self, ids: str, user: UserModel, request: Request, method: ResourceMethod
+        self,
+        ids: str,
+        include: list[str],
+        user: UserModel,
+        request: Request,
+        method: ResourceMethod,
     ):
         normalize_ids = await asyncio.gather(
             *[self.translate_id(user, id.strip(), request) for id in ids.split(",")]
         )
-        objs = await (
-            await self.q(
-                user,
-                request,
-                self.model.filter(id__in=normalize_ids),
-                method,
-            )
-        ).all()
+        q = await self.q(
+            user,
+            request,
+            self.model.filter(id__in=normalize_ids),
+            method,
+        )
+        if include:
+            q = q.only(*include)
+        objs = await q.all()
         if len(objs) != len(normalize_ids):
             raise HTTPNotFoundError
         return objs
@@ -581,6 +587,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             async def get(
                 request: Request,
                 id: str = Path(..., title="id"),
+                include: list[str] = self.include_query(),
                 prefetch: list[str] = self.prefetch_query(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
@@ -591,6 +598,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     self.model.all().filter(id=id),
                     ResourceMethod.get,
                 )
+                if include:
+                    q = q.only(*include)
                 obj = await q.first()
                 if not obj:
                     raise HTTPNotFoundError
@@ -614,6 +623,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 request: Request,
                 ids: str = self.ids_path(),
                 input: UpdateForm = self.get_form_type(self.update_form),
+                include: list[str] = self.include_query(),
                 prefetch: list[str] = self.prefetch_query(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> Any:
@@ -621,7 +631,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     returns: list[Any] = []
                     excludes = await self.excludes(ResourceMethod.put)
                     for obj in await self.get(
-                        ids, current_user, request, ResourceMethod.put
+                        ids, include, current_user, request, ResourceMethod.put
                     ):
                         r = await self.before_update(current_user, obj, input, request)
                         if r:
@@ -693,7 +703,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 async with in_transaction(self.connection_name):
                     rs: list[DeleteResponse] = []
                     for obj in await self.get(
-                        ids, current_user, request, ResourceMethod.delete
+                        ids, [], current_user, request, ResourceMethod.delete
                     ):
                         obj = await self.before_delete(current_user, obj, request)
                         await obj.delete()
