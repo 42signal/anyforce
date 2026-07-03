@@ -1,7 +1,7 @@
 from typing import Any
 
 import pytest
-from fastapi import APIRouter, FastAPI, Request
+from fastapi import APIRouter, BackgroundTasks, FastAPI, Request
 from pydantic import AnyUrl, EmailStr
 
 from anyforce.api import PublicAPI
@@ -31,9 +31,16 @@ def router(app: FastAPI):
             super().__init__(Model2, CreateForm, UpdateForm)
 
         async def after_create(
-            self, user: str, obj: Model2, input: CreateForm, request: Request
+            self,
+            user: str,
+            obj: Model2,
+            input: CreateForm,
+            request: Request,
+            background_tasks: BackgroundTasks,
         ) -> Any:
-            obj = await super().after_create(user, obj, input, request)
+            obj = await super().after_create(
+                user, obj, input, request, background_tasks
+            )
             if obj.id == 1:
                 return Model2.detail().model_validate(obj)
 
@@ -44,12 +51,20 @@ def router(app: FastAPI):
             input: UpdateForm,
             obj: Model2,
             request: Request,
+            background_tasks: BackgroundTasks,
         ) -> Any:
-            obj = await super().after_update(user, old_obj, input, obj, request)
+            obj = await super().after_update(
+                user, old_obj, input, obj, request, background_tasks
+            )
             if obj.id == 1:
                 return Model2.detail().model_validate(obj)
 
-        async def before_delete(self, user: str, obj: Model2, request: Request) -> Any:
+        async def before_delete(
+            self,
+            user: str,
+            obj: Model2,
+            request: Request,
+        ) -> Any:
             obj = await super().before_delete(user, obj, request)
             new_obj = await Model2.filter(id=obj.id).first()
             assert new_obj

@@ -14,7 +14,16 @@ from typing import (
     cast,
 )
 
-from fastapi import APIRouter, Body, Depends, Path, Query, Request, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    Path,
+    Query,
+    Request,
+    status,
+)
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import create_model
@@ -221,7 +230,12 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         return obj
 
     async def after_create(
-        self, user: UserModel, obj: Model, input: Any, request: Request
+        self,
+        user: UserModel,
+        obj: Model,
+        input: Any,
+        request: Request,
+        background_tasks: BackgroundTasks,
     ) -> Any:
         return obj
 
@@ -237,11 +251,15 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         input: UpdateForm,
         obj: Model,
         request: Request,
+        background_tasks: BackgroundTasks,
     ) -> Any:
         return obj
 
     async def before_delete(
-        self, user: UserModel, obj: Model, request: Request
+        self,
+        user: UserModel,
+        obj: Model,
+        request: Request,
     ) -> Model:
         return obj
 
@@ -395,6 +413,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             )
             async def create(
                 request: Request,
+                background_tasks: BackgroundTasks,
                 input: list[CreateForm] | CreateForm = self.get_form_type(
                     self.create_form
                 ),
@@ -421,7 +440,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             )
 
                         obj_rtn = await self.after_create(
-                            current_user, obj, input, request
+                            current_user, obj, input, request, background_tasks
                         )
 
                         if obj_rtn:
@@ -620,6 +639,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             )
             async def update(
                 request: Request,
+                background_tasks: BackgroundTasks,
                 ids: str = self.ids_path(),
                 input: UpdateForm = self.get_form_type(self.update_form),
                 include: list[str] = self.include_query(),
@@ -671,7 +691,12 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                                 )
 
                             obj_rtn = await self.after_update(
-                                current_user, obj_obj, input, obj, request
+                                current_user,
+                                obj_obj,
+                                input,
+                                obj,
+                                request,
+                                background_tasks,
                             )
                             if obj_rtn:
                                 obj = obj_rtn
