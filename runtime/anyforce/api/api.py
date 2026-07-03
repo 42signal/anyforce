@@ -243,7 +243,12 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         return obj
 
     async def before_update(
-        self, user: UserModel, obj: Model, input: UpdateForm, request: Request
+        self,
+        user: UserModel,
+        obj: Model,
+        input: UpdateForm,
+        request: Request,
+        background_tasks: BackgroundTasks,
     ) -> Model | None:
         return obj
 
@@ -668,7 +673,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     for obj in await self.get(
                         ids, include, current_user, request, ResourceMethod.put
                     ):
-                        r = await self.before_update(current_user, obj, input, request)
+                        r = await self.before_update(
+                            current_user, obj, input, request, background_tasks
+                        )
                         if r:
                             obj = r
                             raw = input.model_dump(exclude_unset=True, exclude=excludes)
