@@ -15,6 +15,7 @@ from typing import (
     get_type_hints,
 )
 
+from fastapi import BackgroundTasks
 from pydantic import BaseModel as PydanticModel
 from pydantic import ConfigDict, create_model
 from pydantic.fields import FieldInfo
@@ -478,7 +479,10 @@ class BaseModel(Model):
                 await m2m.add(value)
 
     async def fetch_related(
-        self, *args: Any, using_db: BaseDBAsyncClient | None = None
+        self,
+        *args: Any,
+        using_db: BaseDBAsyncClient | None = None,
+        background_tasks: BackgroundTasks | None = None,
     ) -> None:
         meta = self.PydanticMeta
         computed: set[str]
@@ -490,7 +494,11 @@ class BaseModel(Model):
                     if not f:
                         continue
                     if callable(f):
-                        v = f()
+                        kwargs: dict[str, Any] = {}
+                        parameters = inspect.signature(f).parameters
+                        if "background_tasks" in parameters:
+                            kwargs["background_tasks"] = background_tasks
+                        v = f(**kwargs)
                         if inspect.isawaitable(v):
                             v = await v
                         setattr(self, field, v)
@@ -505,13 +513,18 @@ class BaseModel(Model):
         return await super().fetch_related(*normalized_args, using_db=using_db)
 
     async def fetch_related_lazy(
-        self, path: str, using_db: BaseDBAsyncClient | None = None
+        self,
+        path: str,
+        using_db: BaseDBAsyncClient | None = None,
+        background_tasks: BackgroundTasks | None = None,
     ) -> Any | None:
         instance = getattr(self, path)
         if isinstance(instance, Model):
             return instance
 
-        await self.fetch_related(path, using_db=using_db)
+        await self.fetch_related(
+            path, using_db=using_db, background_tasks=background_tasks
+        )
         return getattr(self, path)
 
     @staticmethod

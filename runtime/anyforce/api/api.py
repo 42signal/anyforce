@@ -24,7 +24,6 @@ from fastapi import (
     Request,
     status,
 )
-from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import create_model
 from pypika_tortoise.functions import Count
@@ -202,7 +201,11 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         return q
 
     async def fetch_related(
-        self, obj: Model, method: ResourceMethod, prefetch: list[str]
+        self,
+        obj: Model,
+        method: ResourceMethod,
+        prefetch: list[str],
+        background_tasks: BackgroundTasks | None = None,
     ):
         excludes = await self.excludes(method)
         if excludes:
@@ -210,7 +213,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             if not include_prefetch:
                 return
             prefetch = list(include_prefetch)
-        await obj.fetch_related(*prefetch)
+        await obj.fetch_related(*prefetch, background_tasks=background_tasks)
 
     async def before_create(
         self,
@@ -262,6 +265,15 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         request: Request,
     ) -> Model:
         return obj
+
+    async def after_delete(
+        self,
+        user: UserModel,
+        obj: Model,
+        request: Request,
+        background_tasks: BackgroundTasks,
+    ) -> None:
+        return None
 
     @classmethod
     def ids_path(cls):
@@ -406,7 +418,6 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             @router.post(
                 "/",
                 response_model=DetailPydanticModels,
-                response_class=ORJSONResponse,
                 status_code=status.HTTP_201_CREATED,
                 response_model_exclude_unset=True,
                 response_model_exclude_none=True,
@@ -436,7 +447,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                         await obj.save_m2ms(m2ms)
                         if prefetch:
                             await self.fetch_related(
-                                obj, ResourceMethod.create, prefetch
+                                obj, ResourceMethod.create, prefetch, background_tasks
                             )
 
                         obj_rtn = await self.after_create(
@@ -507,12 +518,12 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             @router.get(
                 "/",
                 response_model=Response,
-                response_class=ORJSONResponse,
                 response_model_exclude_unset=True,
                 response_model_exclude_none=True,
             )
             async def index(
                 request: Request,
+                background_tasks: BackgroundTasks,
                 offset: int = Query(0, title="分页偏移"),
                 limit: int = Query(20, title="分页限额"),
                 include_summary: bool = Query(False, title="是否包含summary数据"),
@@ -585,9 +596,13 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
                 if prefetch:
                     for obj in objs:
-                        await self.fetch_related(obj, ResourceMethod.list, prefetch)
+                        await self.fetch_related(
+                            obj, ResourceMethod.list, prefetch, background_tasks
+                        )
                     if summary:
-                        await self.fetch_related(summary, ResourceMethod.list, prefetch)
+                        await self.fetch_related(
+                            summary, ResourceMethod.list, prefetch, background_tasks
+                        )
 
                 return Response(
                     total=total,
@@ -598,12 +613,12 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             @router.get(
                 "/{id}",
                 response_model=DetailPydanticModel,
-                response_class=ORJSONResponse,
                 response_model_exclude_unset=True,
                 response_model_exclude_none=True,
             )
             async def get(
                 request: Request,
+                background_tasks: BackgroundTasks,
                 id: str = Path(..., title="id"),
                 include: list[str] = self.include_query(),
                 prefetch: list[str] = self.prefetch_query(),
@@ -622,7 +637,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 if not obj:
                     raise HTTPNotFoundError
                 if prefetch:
-                    await self.fetch_related(obj, ResourceMethod.get, prefetch)
+                    await self.fetch_related(
+                        obj, ResourceMethod.get, prefetch, background_tasks
+                    )
                 return DetailPydanticModel.model_validate(obj)
 
             methods["index"] = index
@@ -633,7 +650,6 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             @router.put(
                 "/{ids}",
                 response_model=DetailPydanticModels,
-                response_class=ORJSONResponse,
                 response_model_exclude_unset=True,
                 response_model_exclude_none=True,
             )
@@ -687,7 +703,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
 
                             if prefetch:
                                 await self.fetch_related(
-                                    obj, ResourceMethod.put, prefetch
+                                    obj, ResourceMethod.put, prefetch, background_tasks
                                 )
 
                             obj_rtn = await self.after_update(
@@ -715,12 +731,12 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             @router.delete(
                 "/{ids}",
                 response_model=list[DeleteResponse] | DeleteResponse,
-                response_class=ORJSONResponse,
                 response_model_exclude_unset=True,
                 response_model_exclude_none=True,
             )
             async def delete(
                 request: Request,
+                background_tasks: BackgroundTasks,
                 ids: str = self.ids_path(),
                 current_user: UserModel = Depends(self.get_current_user),
             ) -> list[DeleteResponse] | DeleteResponse:
@@ -731,6 +747,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     ):
                         obj = await self.before_delete(current_user, obj, request)
                         await obj.delete()
+                        await self.after_delete(
+                            current_user, obj, request, background_tasks
+                        )
                         rs.append(DeleteResponse(id=obj.id))
                     return len(rs) > 1 and rs or rs[0]
 
