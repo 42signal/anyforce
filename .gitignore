@@ -341,3 +341,5 @@ temp/
 # workspace
 .env
 .envrc
+
+.codegraph

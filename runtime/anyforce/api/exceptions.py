@@ -3,7 +3,7 @@ from typing import Any, Match, cast
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError, ValidationException
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from pydantic_core import ErrorDetails
 from tortoise import exceptions
@@ -182,9 +182,7 @@ def translate_orm_error(
 
 
 def handlers():
-    async def valueExceptionHandle(
-        request: Request | None, exc: ValueError
-    ) -> ORJSONResponse:
+    async def valueExceptionHandle(request: Request | None, exc: ValueError):
         msg = str(exc)
         regexps = [
             (r"invalid literal for int\(\) with base 10: '(.+)'", "{0} 不是有效的整数"),
@@ -199,40 +197,34 @@ def handlers():
                 break
         if not matched:
             logger.bind(msg=msg, type=type(exc)).warn("not translate")
-        return ORJSONResponse(
+        return JSONResponse(
             {"detail": {"errors": msg}},
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
     async def validationExceptionHandle(
         request: Request | None, exc: ValidationException
-    ) -> ORJSONResponse:
-        return ORJSONResponse(
+    ):
+        return JSONResponse(
             {"detail": {"errors": translate_validation_exception(exc)}},
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    async def validationErrorHandle(
-        request: Request | None, exc: ValidationError
-    ) -> ORJSONResponse:
-        return ORJSONResponse(
+    async def validationErrorHandle(request: Request | None, exc: ValidationError):
+        return JSONResponse(
             {"detail": {"errors": translate_validate_error(exc)}},
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    async def ormException(
-        request: Request | None, exc: exceptions.BaseORMException
-    ) -> ORJSONResponse:
+    async def ormException(request: Request | None, exc: exceptions.BaseORMException):
         status_code, msgs = translate_orm_error(exc)
-        return ORJSONResponse(
+        return JSONResponse(
             {"detail": {"errors": msgs}},
             status_code=status_code,
         )
 
-    async def enumMissingErrorHandle(
-        request: Request | None, exc: EnumMissingError
-    ) -> ORJSONResponse:
-        return ORJSONResponse(
+    async def enumMissingErrorHandle(request: Request | None, exc: EnumMissingError):
+        return JSONResponse(
             {"detail": {"errors": [str(args) for args in exc.args]}},
             status_code=status.HTTP_400_BAD_REQUEST,
         )
