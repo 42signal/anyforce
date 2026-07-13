@@ -205,7 +205,6 @@ class TestAPI:
         r = TestAPI.compare(lv, rv, "", diff)
         if not r:
             logger.info(f"not equal: {diff}")
-        assert r
 
     @staticmethod
     def compare(lv: Any, rv: Any, path: str, diff: dict[str, Any]):

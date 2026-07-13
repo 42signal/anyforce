@@ -2,6 +2,7 @@ import logging
 import os
 import socket
 import sys
+from functools import partial
 from typing import Any
 
 import orjson
@@ -53,7 +54,9 @@ if not sys.stderr.isatty():
     processors = shared_processors + [
         structlog.processors.dict_tracebacks,
         gelf_processor,
-        structlog.processors.JSONRenderer(serializer=orjson.dumps),
+        structlog.processors.JSONRenderer(
+            serializer=partial(orjson.dumps, default=str)
+        ),
     ]
 
     logger_factory = structlog.BytesLoggerFactory()
