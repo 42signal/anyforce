@@ -9,6 +9,7 @@ from typing import (
     cast,
 )
 
+import orjson
 from pypika_tortoise import functions
 from pypika_tortoise.enums import SqlTypes
 from pypika_tortoise.terms import Term
@@ -21,9 +22,6 @@ from tortoise.fields.data import (
     JsonLoadsFunc,
 )
 from tortoise.models import Model
-
-from ..json import fast_dumps
-from ..json import loads as json_loads
 
 
 def SmallIntField(
@@ -259,8 +257,8 @@ def JSONField(
     source_field: str | None = None,
     default: Any = None,
     description: str | None = None,
-    encoder: JsonDumpsFunc = fast_dumps,
-    decoder: JsonLoadsFunc = json_loads,
+    encoder: JsonDumpsFunc = lambda x: orjson.dumps(x).decode(),
+    decoder: JsonLoadsFunc = orjson.loads,
     **kwargs: Any,
 ):
     return cast(
@@ -280,8 +278,8 @@ def JSONListField(
     source_field: str | None = None,
     default: Any = None,
     description: str | None = None,
-    encoder: JsonDumpsFunc = fast_dumps,
-    decoder: JsonLoadsFunc = json_loads,
+    encoder: JsonDumpsFunc = lambda x: orjson.dumps(x).decode(),
+    decoder: JsonLoadsFunc = orjson.loads,
     **kwargs: Any,
 ):
     return cast(

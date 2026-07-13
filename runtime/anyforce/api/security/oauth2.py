@@ -2,10 +2,10 @@ from typing import Any, Callable
 from urllib.parse import urlencode, urljoin
 
 import aiohttp
+import orjson
 from fastapi import APIRouter, Request
 from starlette.responses import RedirectResponse
 
-from ... import json
 from ..exceptions import HTTPUnAuthorizedError
 
 
@@ -58,7 +58,7 @@ class OAuth2(object):
                     }
                 ),
             ) as response:
-                r = await response.json(loads=json.loads)
+                r = await response.json(loads=orjson.loads)
                 return r["access_token"], r["id_token"]
 
     async def userinfo(self, token: str):
@@ -66,7 +66,7 @@ class OAuth2(object):
             async with session.get(
                 self.join("userinfo"), headers={"Authorization": f"Bearer {token}"}
             ) as response:
-                return await response.json(loads=json.loads)
+                return await response.json(loads=orjson.loads)
 
     def bind(
         self,

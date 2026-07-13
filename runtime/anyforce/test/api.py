@@ -3,7 +3,6 @@ from functools import cached_property
 from typing import Any, Callable, Iterable, cast
 
 from faker import Faker
-from fastapi import APIRouter
 from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 
@@ -26,163 +25,149 @@ class TestAPI:
     def faker(self) -> Faker:
         return Faker()
 
-    async def test_create(
+    def create(
         self,
         client: TestClient,
-        database: bool,
-        router: APIRouter,
         endpoint: str,
-        create_tests: TestConfigs,
-    ):
-        assert router
-        assert database
-        for json, status_code, callback in create_tests:
-            r = post(client, endpoint, json=json)
-            self.log_request(json, status_code, r)
+        json: dict[str, Any],
+        status_code: int,
+        callback: Callable[[dict[str, Any], Any], None] | None = None,
+    ) -> dict[str, Any]:
+        r = post(client, endpoint, json=json)
+        self.log_request(json, status_code, r)
 
-            obj = r.json_object()
-            if status_code < 300:
-                self.assert_obj(obj)
-                self.log_compare(obj, jsonable_encoder(json))
+        obj = r.json_object()
+        if status_code < 300:
+            self.assert_obj(obj)
+            self.log_compare(obj, jsonable_encoder(json))
 
-            if callback:
-                callback(json, obj)
+        if callback:
+            callback(json, obj)
+        return obj
 
-    async def test_list(
+    def list(
         self,
         client: TestClient,
-        database: bool,
-        router: APIRouter,
         endpoint: str,
-        list_tests: TestConfigs,
-    ):
-        assert router
-        assert database
-        for params, status_code, callback in list_tests:
-            r = get(client, f"{endpoint}/", params=params)
-            self.log_request(params, status_code, r)
+        params: dict[str, Any],
+        status_code: int,
+        callback: Callable[[dict[str, Any], Any], None] | None = None,
+    ) -> dict[str, Any]:
+        r = get(client, f"{endpoint}/", params=params)
+        self.log_request(params, status_code, r)
 
-            r = r.json_object()
-            if status_code < 300:
-                # validate total offset limit
-                assert r
-                assert r["total"] > 0
-                assert len(r["data"]) > 0 and len(r["data"]) < params.get("limit", 20)
-                assert params.get("offset", 0) + len(r["data"]) <= r["total"]
+        obj = r.json_object()
+        if status_code < 300:
+            # validate total offset limit
+            assert obj
+            assert obj["total"] > 0
+            assert len(obj["data"]) > 0 and len(obj["data"]) < params.get("limit", 20)
+            assert params.get("offset", 0) + len(obj["data"]) <= obj["total"]
 
-                self.assert_obj(r["data"][0])
+            self.assert_obj(obj["data"][0])
 
-                # validate prefetch
-                prefetch: Any = params.get("prefetch", [])
-                prefetch = (
-                    cast(list[str], prefetch)
-                    if isinstance(prefetch, list)
-                    else [prefetch]
-                )
-                for k in prefetch:
-                    exist = False
-                    for e in r["data"]:
-                        if e.get(k) is not None:
-                            exist = True
-                            break
-                    if not exist:
-                        logger.info(f"prefetch: {prefetch} => {r['data']}")
-                    assert exist
-
-            if callback:
-                callback(params, r)
-
-    async def test_get(
-        self,
-        client: TestClient,
-        database: bool,
-        router: APIRouter,
-        endpoint: str,
-        get_tests: TestConfigs,
-    ):
-        assert router
-        assert database
-        for params, status_code, callback in get_tests:
-            input_params = params.copy()
-            r = get(
-                client,
-                f"{endpoint}/{params.pop('id')}",
-                params=params,
+            # validate prefetch
+            prefetch: Any = params.get("prefetch", [])
+            prefetch = (
+                cast(list[str], prefetch) if isinstance(prefetch, list) else [prefetch]
             )
-            self.log_request(input_params, status_code, r)
+            for k in prefetch:
+                exist = False
+                for e in obj["data"]:
+                    if e.get(k) is not None:
+                        exist = True
+                        break
+                if not exist:
+                    logger.info(f"prefetch: {prefetch} => {obj['data']}")
+                assert exist
 
-            obj = r.json_object()
-            if status_code < 300:
-                self.assert_obj(obj)
+        if callback:
+            callback(params, obj)
+        return obj
 
-                # validate prefetch
-                prefetch: Any = params.get("prefetch", [])
-                prefetch = (
-                    cast(list[str], prefetch)
-                    if isinstance(prefetch, list)
-                    else [prefetch]
-                )
-                for k in prefetch:
-                    assert obj.get(k) is not None
-
-            if callback:
-                callback(params, obj)
-
-    async def test_update(
+    def get(
         self,
         client: TestClient,
-        database: bool,
-        router: APIRouter,
         endpoint: str,
-        update_tests: TestConfigs,
-    ):
-        assert router
-        assert database
-        for params, status_code, callback in update_tests:
-            input_params = params.copy()
-            body = params.pop("body", {})
-            r = put(
-                client,
-                f"{endpoint}/{params.pop('id')}",
-                json=body,
-                params=params,
+        params: dict[str, Any],
+        status_code: int,
+        callback: Callable[[dict[str, Any], Any], None] | None = None,
+    ) -> dict[str, Any]:
+        input_params = params.copy()
+        r = get(
+            client,
+            f"{endpoint}/{params.pop('id')}",
+            params=params,
+        )
+        self.log_request(input_params, status_code, r)
+
+        obj = r.json_object()
+        if status_code < 300:
+            self.assert_obj(obj)
+
+            # validate prefetch
+            prefetch: Any = params.get("prefetch", [])
+            prefetch = (
+                cast(list[str], prefetch) if isinstance(prefetch, list) else [prefetch]
             )
-            self.log_request(input_params, status_code, r)
+            for k in prefetch:
+                assert obj.get(k) is not None
 
-            obj = r.json_object()
-            if status_code < 300:
-                self.assert_obj(obj)
-                self.log_compare(obj, body)
+        if callback:
+            callback(params, obj)
+        return obj
 
-            if callback:
-                callback(params, obj)
-
-    async def test_delete(
+    def update(
         self,
         client: TestClient,
-        database: bool,
-        router: APIRouter,
         endpoint: str,
-        delete_tests: TestConfigs,
-    ):
-        assert router
-        assert database
-        for params, status_code, callback in delete_tests:
-            input_params = params.copy()
-            r = delete(
-                client,
-                f"{endpoint}/{params.pop('id')}",
-                params=params,
-            )
-            self.log_request(input_params, status_code, r)
+        params: dict[str, Any],
+        status_code: int,
+        callback: Callable[[dict[str, Any], Any], None] | None = None,
+    ) -> dict[str, Any]:
+        input_params = params.copy()
+        body = params.pop("body", {})
+        r = put(
+            client,
+            f"{endpoint}/{params.pop('id')}",
+            json=body,
+            params=params,
+        )
+        self.log_request(input_params, status_code, r)
 
-            obj = r.json_object()
-            if status_code < 300:
-                assert obj
-                assert obj["id"]
+        obj = r.json_object()
+        if status_code < 300:
+            self.assert_obj(obj)
+            self.log_compare(obj, body)
 
-            if callback:
-                callback(params, obj)
+        if callback:
+            callback(params, obj)
+        return obj
+
+    def delete(
+        self,
+        client: TestClient,
+        endpoint: str,
+        params: dict[str, Any],
+        status_code: int,
+        callback: Callable[[dict[str, Any], Any], None] | None = None,
+    ) -> dict[str, Any]:
+        input_params = params.copy()
+        r = delete(
+            client,
+            f"{endpoint}/{params.pop('id')}",
+            params=params,
+        )
+        self.log_request(input_params, status_code, r)
+
+        obj = r.json_object()
+        if status_code < 300:
+            assert obj
+            assert obj["id"]
+
+        if callback:
+            callback(params, obj)
+        return obj
 
     @staticmethod
     def log_request(input: Any, status_code: int, r: Any):
@@ -205,7 +190,6 @@ class TestAPI:
         r = TestAPI.compare(lv, rv, "", diff)
         if not r:
             logger.info(f"not equal: {diff}")
-        assert r
 
     @staticmethod
     def compare(lv: Any, rv: Any, path: str, diff: dict[str, Any]):
