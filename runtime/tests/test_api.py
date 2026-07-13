@@ -5,262 +5,277 @@ import pytest
 from fastapi import status
 
 from anyforce.test import TestAPI as Base
-from anyforce.test import TestConfigs
 
 
-@pytest.mark.asyncio
 class TestAPI(Base):
     @pytest.fixture()
-    def endpoint(self):
-        yield "/models"
+    def endpoint(self, database: bool, router: Any):
+        assert database
+        assert router
+        return "/models"
 
-    @pytest.fixture()
-    def create_tests(self):
-        def tests():
-            unique_field = self.faker.pystr()
-            yield (
-                {
-                    "char_enum_field": "b",
-                    "required_char_field": self.faker.pystr(),
-                    "nullable_char_field": unique_field,
-                    "int_field": self.faker.pyint(max_value=65565),
-                    "bigint_field": self.faker.pyint(max_value=65565),
-                    "text_field": self.faker.url(),
-                    "json_field": list(self.faker.pytuple()),
-                },
-                status.HTTP_201_CREATED,
-                None,
-            )
+    def test_create(self, client: Any, endpoint: str):
+        self.create(
+            client,
+            endpoint,
+            {
+                "char_enum_field": "b",
+                "required_char_field": self.faker.pystr(),
+                "nullable_char_field": "unique",
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
+                "text_field": self.faker.url(),
+                "json_field": list(self.faker.pytuple()),
+            },
+            status.HTTP_201_CREATED,
+        )
 
-            # int
-            yield (
-                {
-                    "char_enum_field": "b",
-                    "required_char_field": self.faker.pystr(),
-                    "int_field": self.faker.name(),
-                    "bigint_field": self.faker.pyint(max_value=65565),
-                    "text_field": self.faker.url(),
-                    "json_field": list(self.faker.pytuple()),
-                },
-                status.HTTP_400_BAD_REQUEST,
-                None,
-            )
+    def test_create_with_invalid_int(self, client: Any, endpoint: str):
+        self.create(
+            client,
+            endpoint,
+            {
+                "char_enum_field": "b",
+                "required_char_field": self.faker.pystr(),
+                "int_field": self.faker.name(),
+                "bigint_field": self.faker.pyint(max_value=65565),
+                "text_field": self.faker.url(),
+                "json_field": list(self.faker.pytuple()),
+            },
+            status.HTTP_400_BAD_REQUEST,
+        )
 
-            # url
-            yield (
-                {
-                    "char_enum_field": "b",
-                    "required_char_field": self.faker.pystr(),
-                    "int_field": self.faker.name(),
-                    "bigint_field": self.faker.pyint(max_value=65565),
-                    "text_field": self.faker.name(),
-                    "json_field": list(self.faker.pytuple()),
-                },
-                status.HTTP_400_BAD_REQUEST,
-                None,
-            )
+    def test_create_with_invalid_url(self, client: Any, endpoint: str):
+        self.create(
+            client,
+            endpoint,
+            {
+                "char_enum_field": "b",
+                "required_char_field": self.faker.pystr(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
+                "text_field": self.faker.name(),
+                "json_field": list(self.faker.pytuple()),
+            },
+            status.HTTP_400_BAD_REQUEST,
+        )
 
-            # enum
-            yield (
-                {
-                    "char_enum_field": "c",
-                    "required_char_field": self.faker.pystr(),
-                    "int_field": self.faker.pyint(max_value=65565),
-                    "bigint_field": self.faker.pyint(max_value=65565),
-                    "text_field": self.faker.url(),
-                    "json_field": list(self.faker.pytuple()),
-                },
-                status.HTTP_400_BAD_REQUEST,
-                None,
-            )
+    def test_create_with_invalid_enum(self, client: Any, endpoint: str):
+        self.create(
+            client,
+            endpoint,
+            {
+                "char_enum_field": "c",
+                "required_char_field": self.faker.pystr(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
+                "text_field": self.faker.url(),
+                "json_field": list(self.faker.pytuple()),
+            },
+            status.HTTP_400_BAD_REQUEST,
+        )
 
-            # unique
-            yield (
-                {
-                    "char_enum_field": "a",
-                    "required_char_field": self.faker.pystr(),
-                    "nullable_char_field": unique_field,
-                    "int_field": self.faker.pyint(max_value=65565),
-                    "bigint_field": self.faker.pyint(max_value=65565),
-                    "text_field": self.faker.url(),
-                    "json_field": list(self.faker.pytuple()),
-                },
-                status.HTTP_409_CONFLICT,
-                None,
-            )
+    def test_create_with_duplicate_unique_field(self, client: Any, endpoint: str):
+        self.create(
+            client,
+            endpoint,
+            {
+                "char_enum_field": "a",
+                "required_char_field": self.faker.pystr(),
+                "nullable_char_field": "unique",
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
+                "text_field": self.faker.url(),
+                "json_field": list(self.faker.pytuple()),
+            },
+            status.HTTP_409_CONFLICT,
+        )
 
-            # required
-            yield (
-                {
-                    "char_enum_field": "a",
-                    "nullable_char_field": self.faker.pystr(),
-                    "int_field": self.faker.pyint(max_value=65565),
-                    "bigint_field": self.faker.pyint(max_value=65565),
-                    "text_field": self.faker.url(),
-                    "json_field": list(self.faker.pytuple()),
-                },
-                status.HTTP_400_BAD_REQUEST,
-                None,
-            )
+    def test_create_without_required_field(self, client: Any, endpoint: str):
+        self.create(
+            client,
+            endpoint,
+            {
+                "char_enum_field": "a",
+                "nullable_char_field": self.faker.pystr(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
+                "text_field": self.faker.url(),
+                "json_field": list(self.faker.pytuple()),
+            },
+            status.HTTP_400_BAD_REQUEST,
+        )
 
-            # too lang
-            yield (
-                {
-                    "char_enum_field": "a",
-                    "required_char_field": self.faker.pystr(min_chars=33, max_chars=64),
-                    "nullable_char_field": self.faker.pystr(),
-                    "int_field": self.faker.pyint(max_value=65565),
-                    "bigint_field": self.faker.pyint(max_value=65565),
-                    "text_field": self.faker.url(),
-                    "json_field": list(self.faker.pytuple()),
-                },
-                status.HTTP_400_BAD_REQUEST,
-                None,
-            )
+    def test_create_with_too_long_field(self, client: Any, endpoint: str):
+        self.create(
+            client,
+            endpoint,
+            {
+                "char_enum_field": "a",
+                "required_char_field": self.faker.pystr(min_chars=33, max_chars=64),
+                "nullable_char_field": self.faker.pystr(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
+                "text_field": self.faker.url(),
+                "json_field": list(self.faker.pytuple()),
+            },
+            status.HTTP_400_BAD_REQUEST,
+        )
 
-            # save related
-            yield (
-                {
-                    "char_enum_field": "a",
-                    "required_char_field": self.faker.pystr(),
-                    "nullable_char_field": self.faker.pystr(),
-                    "int_field": self.faker.pyint(max_value=65565),
-                    "bigint_field": self.faker.pyint(max_value=65565),
-                    "text_field": self.faker.url(),
-                    "json_field": list(self.faker.pytuple()),
-                },
-                status.HTTP_201_CREATED,
-                None,
-            )
-            yield (
-                {
-                    "char_enum_field": "a",
-                    "required_char_field": self.faker.pystr(),
-                    "nullable_char_field": self.faker.pystr(),
-                    "int_field": self.faker.pyint(max_value=65565),
-                    "bigint_field": self.faker.pyint(max_value=65565),
-                    "text_field": self.faker.url(),
-                    "json_field": list(self.faker.pytuple()),
-                },
-                status.HTTP_201_CREATED,
-                None,
-            )
+    def test_create_related_object(self, client: Any, endpoint: str):
+        self.create(
+            client,
+            endpoint,
+            {
+                "char_enum_field": "a",
+                "required_char_field": self.faker.pystr(),
+                "nullable_char_field": self.faker.pystr(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
+                "text_field": self.faker.url(),
+                "json_field": list(self.faker.pytuple()),
+            },
+            status.HTTP_201_CREATED,
+        )
 
-        return tests()
+    def test_create_another_related_object(self, client: Any, endpoint: str):
+        self.create(
+            client,
+            endpoint,
+            {
+                "char_enum_field": "a",
+                "required_char_field": self.faker.pystr(),
+                "nullable_char_field": self.faker.pystr(),
+                "int_field": self.faker.pyint(max_value=65565),
+                "bigint_field": self.faker.pyint(max_value=65565),
+                "text_field": self.faker.url(),
+                "json_field": list(self.faker.pytuple()),
+            },
+            status.HTTP_201_CREATED,
+        )
 
-    @pytest.fixture()
-    def list_tests(self):
-        def check_computed(params: dict[str, Any], r: Any) -> None:
-            for e in r["data"]:
+    def test_list_with_prefetch(self, client: Any, endpoint: str):
+        def check_computed(params: dict[str, Any], response: Any) -> None:
+            for item in response["data"]:
                 assert (
-                    e["int_field_plus_bigint_field"]
-                    == e["int_field"] + e["bigint_field"]
+                    item["int_field_plus_bigint_field"]
+                    == item["int_field"] + item["bigint_field"]
                 )
                 assert (
-                    e["async_int_field_plus_bigint_field"]
-                    == e["int_field"] + e["bigint_field"]
+                    item["async_int_field_plus_bigint_field"]
+                    == item["int_field"] + item["bigint_field"]
                 )
 
-        def tests():
-            # prefetch / computed / order_by
-            yield (
-                {
-                    "prefetch": [
-                        "int_field_plus_bigint_field",
-                        "async_int_field_plus_bigint_field",
-                    ],
-                    "order_by": "int_field",
+        self.list(
+            client,
+            endpoint,
+            {
+                "prefetch": [
+                    "int_field_plus_bigint_field",
+                    "async_int_field_plus_bigint_field",
+                ],
+                "order_by": "int_field",
+            },
+            status.HTTP_200_OK,
+            check_computed,
+        )
+
+    def test_list_with_filter(self, client: Any, endpoint: str):
+        def check_filtered(params: dict[str, Any], response: Any) -> None:
+            assert response["total"] == 1
+            assert response["data"][0]["char_enum_field"] == "b"
+
+        self.list(
+            client,
+            endpoint,
+            {"condition": [orjson.dumps({"char_enum_field": "b"}).decode()]},
+            status.HTTP_200_OK,
+            check_filtered,
+        )
+
+    def test_list_with_in_filter(self, client: Any, endpoint: str):
+        def check_filtered(params: dict[str, Any], response: Any) -> None:
+            assert response["total"] == 1
+            assert response["data"][0]["char_enum_field"] == "b"
+
+        self.list(
+            client,
+            endpoint,
+            {"condition": [orjson.dumps({"char_enum_field.in": ["b"]}).decode()]},
+            status.HTTP_200_OK,
+            check_filtered,
+        )
+
+    def test_get(self, client: Any, endpoint: str):
+        self.get(
+            client,
+            endpoint,
+            {"id": 1, "prefetch": ["int_field_plus_bigint_field"]},
+            status.HTTP_200_OK,
+        )
+
+    def test_get_not_found(self, client: Any, endpoint: str):
+        self.get(
+            client,
+            endpoint,
+            {"id": 10000},
+            status.HTTP_404_NOT_FOUND,
+        )
+
+    def test_update(self, client: Any, endpoint: str):
+        self.update(
+            client,
+            endpoint,
+            {
+                "id": 1,
+                "prefetch": ["int_field_plus_bigint_field"],
+                "body": {
+                    "text_field": "hi@google.com",
+                    "bigint_field": self.faker.pyint(max_value=65565),
                 },
-                status.HTTP_200_OK,
-                check_computed,
-            )
+            },
+            status.HTTP_200_OK,
+        )
 
-            def check1(params: dict[str, Any], r: Any) -> None:
-                assert r["total"] == 1
-                assert r["data"][0]["char_enum_field"] == "b"
+    def test_update_with_invalid_url(self, client: Any, endpoint: str):
+        self.update(
+            client,
+            endpoint,
+            {
+                "id": 1,
+                "prefetch": ["int_field_plus_bigint_field"],
+                "body": {"text_field": self.faker.name()},
+            },
+            status.HTTP_400_BAD_REQUEST,
+        )
 
-            # filter
-            yield (
-                {"condition": [orjson.dumps({"char_enum_field": "b"}).decode()]},
-                status.HTTP_200_OK,
-                check1,
-            )
+    def test_update_related_object(self, client: Any, endpoint: str):
+        self.update(
+            client,
+            endpoint,
+            {
+                "id": 2,
+                "prefetch": ["int_field_plus_bigint_field"],
+                "body": {"bigint_field": self.faker.pyint(max_value=65565)},
+            },
+            status.HTTP_200_OK,
+        )
 
-            yield (
-                {"condition": [orjson.dumps({"char_enum_field.in": ["b"]}).decode()]},
-                status.HTTP_200_OK,
-                check1,
-            )
+    def test_update_not_found(self, client: Any, endpoint: str):
+        self.update(
+            client,
+            endpoint,
+            {
+                "id": 10000,
+                "body": {"bigint_field": self.faker.pyint(max_value=65565)},
+            },
+            status.HTTP_404_NOT_FOUND,
+        )
 
-        return tests()
-
-    @pytest.fixture()
-    def get_tests(self):
-        def tests():
-            yield (
-                {
-                    "id": 1,
-                    "prefetch": ["int_field_plus_bigint_field"],
-                },
-                status.HTTP_200_OK,
-                None,
-            )
-            yield {"id": 10000}, status.HTTP_404_NOT_FOUND, None
-
-        return tests()
-
-    @pytest.fixture()
-    def update_tests(self):
-        def tests() -> TestConfigs:
-            yield (
-                {
-                    "id": 1,
-                    "prefetch": ["int_field_plus_bigint_field"],
-                    "body": {
-                        "text_field": "hi@google.com",
-                        "bigint_field": self.faker.pyint(max_value=65565),
-                    },
-                },
-                status.HTTP_200_OK,
-                None,
-            )
-
-            yield (
-                {
-                    "id": 1,
-                    "prefetch": ["int_field_plus_bigint_field"],
-                    "body": {"text_field": self.faker.name()},
-                },
-                status.HTTP_400_BAD_REQUEST,
-                None,
-            )
-
-            yield (
-                {
-                    "id": 2,
-                    "prefetch": ["int_field_plus_bigint_field"],
-                    "body": {"bigint_field": self.faker.pyint(max_value=65565)},
-                },
-                status.HTTP_200_OK,
-                None,
-            )
-
-            yield (
-                {
-                    "id": 10000,
-                    "body": {
-                        "bigint_field": self.faker.pyint(max_value=65565),
-                    },
-                },
-                status.HTTP_404_NOT_FOUND,
-                None,
-            )
-
-        return tests()
-
-    @pytest.fixture()
-    def delete_tests(self):
-        def tests() -> TestConfigs:
-            yield {"id": 1}, status.HTTP_200_OK, None
-
-        return tests()
+    def test_delete(self, client: Any, endpoint: str):
+        self.delete(
+            client,
+            endpoint,
+            {"id": 1},
+            status.HTTP_200_OK,
+        )
