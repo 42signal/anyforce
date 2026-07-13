@@ -1,6 +1,6 @@
 import logging
 from functools import cached_property
-from typing import Any, Callable, cast
+from typing import Any, Callable, Iterable, cast
 
 from faker import Faker
 from fastapi.encoders import jsonable_encoder
@@ -9,6 +9,15 @@ from fastapi.testclient import TestClient
 from .request import delete, get, post, put
 
 logger = logging.getLogger()
+
+
+TestConfigs = Iterable[
+    tuple[
+        dict[str, Any],
+        int,
+        Callable[[dict[str, Any], Any], None] | None,
+    ]
+]
 
 
 class TestAPI:
@@ -23,7 +32,7 @@ class TestAPI:
         json: dict[str, Any],
         status_code: int,
         callback: Callable[[dict[str, Any], Any], None] | None = None,
-    ) -> None:
+    ) -> dict[str, Any]:
         r = post(client, endpoint, json=json)
         self.log_request(json, status_code, r)
 
@@ -34,6 +43,7 @@ class TestAPI:
 
         if callback:
             callback(json, obj)
+        return obj
 
     def list(
         self,
@@ -42,7 +52,7 @@ class TestAPI:
         params: dict[str, Any],
         status_code: int,
         callback: Callable[[dict[str, Any], Any], None] | None = None,
-    ) -> None:
+    ) -> dict[str, Any]:
         r = get(client, f"{endpoint}/", params=params)
         self.log_request(params, status_code, r)
 
@@ -73,6 +83,7 @@ class TestAPI:
 
         if callback:
             callback(params, obj)
+        return obj
 
     def get(
         self,
@@ -81,7 +92,7 @@ class TestAPI:
         params: dict[str, Any],
         status_code: int,
         callback: Callable[[dict[str, Any], Any], None] | None = None,
-    ) -> None:
+    ) -> dict[str, Any]:
         input_params = params.copy()
         r = get(
             client,
@@ -104,6 +115,7 @@ class TestAPI:
 
         if callback:
             callback(params, obj)
+        return obj
 
     def update(
         self,
@@ -112,7 +124,7 @@ class TestAPI:
         params: dict[str, Any],
         status_code: int,
         callback: Callable[[dict[str, Any], Any], None] | None = None,
-    ) -> None:
+    ) -> dict[str, Any]:
         input_params = params.copy()
         body = params.pop("body", {})
         r = put(
@@ -130,6 +142,7 @@ class TestAPI:
 
         if callback:
             callback(params, obj)
+        return obj
 
     def delete(
         self,
@@ -138,7 +151,7 @@ class TestAPI:
         params: dict[str, Any],
         status_code: int,
         callback: Callable[[dict[str, Any], Any], None] | None = None,
-    ) -> None:
+    ) -> dict[str, Any]:
         input_params = params.copy()
         r = delete(
             client,
@@ -154,6 +167,7 @@ class TestAPI:
 
         if callback:
             callback(params, obj)
+        return obj
 
     @staticmethod
     def log_request(input: Any, status_code: int, r: Any):

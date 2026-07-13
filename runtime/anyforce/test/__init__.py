@@ -1,3 +1,3 @@
-from .api import TestAPI
+from .api import TestAPI, TestConfigs
 
-__all__ = ["TestAPI"]
+__all__ = ["TestConfigs", "TestAPI"]

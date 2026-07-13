@@ -14,19 +14,24 @@ class TestAPI(Base):
         assert router
         return "/models"
 
+    def create_data(self, **overrides: Any) -> dict[str, Any]:
+        data = {
+            "char_enum_field": "a",
+            "required_char_field": self.faker.pystr(),
+            "nullable_char_field": self.faker.pystr(),
+            "int_field": self.faker.pyint(max_value=65565),
+            "bigint_field": self.faker.pyint(max_value=65565),
+            "text_field": self.faker.url(),
+            "json_field": list(self.faker.pytuple()),
+        }
+        data.update(overrides)
+        return data
+
     def test_create(self, client: Any, endpoint: str):
         self.create(
             client,
             endpoint,
-            {
-                "char_enum_field": "b",
-                "required_char_field": self.faker.pystr(),
-                "nullable_char_field": "unique",
-                "int_field": self.faker.pyint(max_value=65565),
-                "bigint_field": self.faker.pyint(max_value=65565),
-                "text_field": self.faker.url(),
-                "json_field": list(self.faker.pytuple()),
-            },
+            self.create_data(char_enum_field="b"),
             status.HTTP_201_CREATED,
         )
 
@@ -34,14 +39,7 @@ class TestAPI(Base):
         self.create(
             client,
             endpoint,
-            {
-                "char_enum_field": "b",
-                "required_char_field": self.faker.pystr(),
-                "int_field": self.faker.name(),
-                "bigint_field": self.faker.pyint(max_value=65565),
-                "text_field": self.faker.url(),
-                "json_field": list(self.faker.pytuple()),
-            },
+            self.create_data(char_enum_field="b", int_field=self.faker.name()),
             status.HTTP_400_BAD_REQUEST,
         )
 
@@ -49,14 +47,7 @@ class TestAPI(Base):
         self.create(
             client,
             endpoint,
-            {
-                "char_enum_field": "b",
-                "required_char_field": self.faker.pystr(),
-                "int_field": self.faker.pyint(max_value=65565),
-                "bigint_field": self.faker.pyint(max_value=65565),
-                "text_field": self.faker.name(),
-                "json_field": list(self.faker.pytuple()),
-            },
+            self.create_data(char_enum_field="b", text_field=self.faker.name()),
             status.HTTP_400_BAD_REQUEST,
         )
 
@@ -64,61 +55,37 @@ class TestAPI(Base):
         self.create(
             client,
             endpoint,
-            {
-                "char_enum_field": "c",
-                "required_char_field": self.faker.pystr(),
-                "int_field": self.faker.pyint(max_value=65565),
-                "bigint_field": self.faker.pyint(max_value=65565),
-                "text_field": self.faker.url(),
-                "json_field": list(self.faker.pytuple()),
-            },
+            self.create_data(char_enum_field="c"),
             status.HTTP_400_BAD_REQUEST,
         )
 
     def test_create_with_duplicate_unique_field(self, client: Any, endpoint: str):
+        unique_field = self.faker.pystr()
         self.create(
             client,
             endpoint,
-            {
-                "char_enum_field": "a",
-                "required_char_field": self.faker.pystr(),
-                "nullable_char_field": "unique",
-                "int_field": self.faker.pyint(max_value=65565),
-                "bigint_field": self.faker.pyint(max_value=65565),
-                "text_field": self.faker.url(),
-                "json_field": list(self.faker.pytuple()),
-            },
+            self.create_data(nullable_char_field=unique_field),
+            status.HTTP_201_CREATED,
+        )
+        self.create(
+            client,
+            endpoint,
+            self.create_data(nullable_char_field=unique_field),
             status.HTTP_409_CONFLICT,
         )
 
     def test_create_without_required_field(self, client: Any, endpoint: str):
-        self.create(
-            client,
-            endpoint,
-            {
-                "char_enum_field": "a",
-                "nullable_char_field": self.faker.pystr(),
-                "int_field": self.faker.pyint(max_value=65565),
-                "bigint_field": self.faker.pyint(max_value=65565),
-                "text_field": self.faker.url(),
-                "json_field": list(self.faker.pytuple()),
-            },
-            status.HTTP_400_BAD_REQUEST,
-        )
+        data = self.create_data()
+        del data["required_char_field"]
+        self.create(client, endpoint, data, status.HTTP_400_BAD_REQUEST)
 
     def test_create_with_too_long_field(self, client: Any, endpoint: str):
         self.create(
             client,
             endpoint,
-            {
-                "char_enum_field": "a",
-                "required_char_field": self.faker.pystr(min_chars=33, max_chars=64),
-                "nullable_char_field": self.faker.pystr(),
-                "int_field": self.faker.pyint(max_value=65565),
-                "bigint_field": self.faker.pyint(max_value=65565),
-                "text_field": self.faker.url(),
-                "json_field": list(self.faker.pytuple()),
-            },
+            self.create_data(
+                required_char_field=self.faker.pystr(min_chars=33, max_chars=64)
+            ),
             status.HTTP_400_BAD_REQUEST,
         )
 
@@ -126,15 +93,7 @@ class TestAPI(Base):
         self.create(
             client,
             endpoint,
-            {
-                "char_enum_field": "a",
-                "required_char_field": self.faker.pystr(),
-                "nullable_char_field": self.faker.pystr(),
-                "int_field": self.faker.pyint(max_value=65565),
-                "bigint_field": self.faker.pyint(max_value=65565),
-                "text_field": self.faker.url(),
-                "json_field": list(self.faker.pytuple()),
-            },
+            self.create_data(),
             status.HTTP_201_CREATED,
         )
 
@@ -142,20 +101,14 @@ class TestAPI(Base):
         self.create(
             client,
             endpoint,
-            {
-                "char_enum_field": "a",
-                "required_char_field": self.faker.pystr(),
-                "nullable_char_field": self.faker.pystr(),
-                "int_field": self.faker.pyint(max_value=65565),
-                "bigint_field": self.faker.pyint(max_value=65565),
-                "text_field": self.faker.url(),
-                "json_field": list(self.faker.pytuple()),
-            },
+            self.create_data(),
             status.HTTP_201_CREATED,
         )
 
     def test_list_with_prefetch(self, client: Any, endpoint: str):
-        def check_computed(params: dict[str, Any], response: Any) -> None:
+        self.create(client, endpoint, self.create_data(), status.HTTP_201_CREATED)
+
+        def check_computed(_params: dict[str, Any], response: Any) -> None:
             for item in response["data"]:
                 assert (
                     item["int_field_plus_bigint_field"]
@@ -181,9 +134,15 @@ class TestAPI(Base):
         )
 
     def test_list_with_filter(self, client: Any, endpoint: str):
-        def check_filtered(params: dict[str, Any], response: Any) -> None:
-            assert response["total"] == 1
-            assert response["data"][0]["char_enum_field"] == "b"
+        self.create(
+            client,
+            endpoint,
+            self.create_data(char_enum_field="b"),
+            status.HTTP_201_CREATED,
+        )
+
+        def check_filtered(_params: dict[str, Any], response: Any) -> None:
+            assert all(item["char_enum_field"] == "b" for item in response["data"])
 
         self.list(
             client,
@@ -194,9 +153,15 @@ class TestAPI(Base):
         )
 
     def test_list_with_in_filter(self, client: Any, endpoint: str):
-        def check_filtered(params: dict[str, Any], response: Any) -> None:
-            assert response["total"] == 1
-            assert response["data"][0]["char_enum_field"] == "b"
+        self.create(
+            client,
+            endpoint,
+            self.create_data(char_enum_field="b"),
+            status.HTTP_201_CREATED,
+        )
+
+        def check_filtered(_params: dict[str, Any], response: Any) -> None:
+            assert all(item["char_enum_field"] == "b" for item in response["data"])
 
         self.list(
             client,
@@ -207,10 +172,13 @@ class TestAPI(Base):
         )
 
     def test_get(self, client: Any, endpoint: str):
+        created = self.create(
+            client, endpoint, self.create_data(), status.HTTP_201_CREATED
+        )
         self.get(
             client,
             endpoint,
-            {"id": 1, "prefetch": ["int_field_plus_bigint_field"]},
+            {"id": created["id"], "prefetch": ["int_field_plus_bigint_field"]},
             status.HTTP_200_OK,
         )
 
@@ -223,11 +191,14 @@ class TestAPI(Base):
         )
 
     def test_update(self, client: Any, endpoint: str):
+        created = self.create(
+            client, endpoint, self.create_data(), status.HTTP_201_CREATED
+        )
         self.update(
             client,
             endpoint,
             {
-                "id": 1,
+                "id": created["id"],
                 "prefetch": ["int_field_plus_bigint_field"],
                 "body": {
                     "text_field": "hi@google.com",
@@ -238,11 +209,14 @@ class TestAPI(Base):
         )
 
     def test_update_with_invalid_url(self, client: Any, endpoint: str):
+        created = self.create(
+            client, endpoint, self.create_data(), status.HTTP_201_CREATED
+        )
         self.update(
             client,
             endpoint,
             {
-                "id": 1,
+                "id": created["id"],
                 "prefetch": ["int_field_plus_bigint_field"],
                 "body": {"text_field": self.faker.name()},
             },
@@ -250,11 +224,14 @@ class TestAPI(Base):
         )
 
     def test_update_related_object(self, client: Any, endpoint: str):
+        created = self.create(
+            client, endpoint, self.create_data(), status.HTTP_201_CREATED
+        )
         self.update(
             client,
             endpoint,
             {
-                "id": 2,
+                "id": created["id"],
                 "prefetch": ["int_field_plus_bigint_field"],
                 "body": {"bigint_field": self.faker.pyint(max_value=65565)},
             },
@@ -273,9 +250,12 @@ class TestAPI(Base):
         )
 
     def test_delete(self, client: Any, endpoint: str):
+        created = self.create(
+            client, endpoint, self.create_data(), status.HTTP_201_CREATED
+        )
         self.delete(
             client,
             endpoint,
-            {"id": 1},
+            {"id": created["id"]},
             status.HTTP_200_OK,
         )
