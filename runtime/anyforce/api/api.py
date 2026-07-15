@@ -392,13 +392,30 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 and not (isinstance(v, list) and not v)
                 and not (isinstance(v, dict) and not v)
             ):
-                q_kwargs[k] = v
+                q_kwargs[k] = self.parse_condition_value(v)
         kv_q = Q(
             *qs,
             **q_kwargs,
             join_type=Q.AND,
         )
         return q, kv_q
+
+    @classmethod
+    def parse_condition_value(cls, v: Any) -> Any:
+        if isinstance(v, dict):
+            v = cast(dict[Any, Any], v)
+            for k, e in v.items():
+                v[k] = cls.parse_condition_value(e)
+        elif isinstance(v, list):
+            v = cast(list[Any], v)
+            for i, e in enumerate(v):
+                v[i] = cls.parse_condition_value(e)
+        elif isinstance(v, str) and v.find("T") == 10:
+            try:
+                return cls.parse_condition_value(v)
+            except ValueError:
+                pass
+        return v
 
     def bind(self, router: APIRouter):
         list_exclude: set[str] = set(self.model.PydanticMeta.list_exclude or [])
