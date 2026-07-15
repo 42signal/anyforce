@@ -1,8 +1,10 @@
-from typing import Any
+from datetime import datetime
+from typing import Any, cast
 
 import pytest
 from fastapi import APIRouter, BackgroundTasks, FastAPI, Request
 from pydantic import AnyUrl, EmailStr
+from tortoise.queryset import QuerySet
 
 from anyforce.api import PublicAPI
 
@@ -29,6 +31,19 @@ def router(app: FastAPI):
     class API(PublicAPI[Model2, CreateForm, UpdateForm]):
         def __init__(self) -> None:
             super().__init__(Model2, CreateForm, UpdateForm)
+
+        async def translate_condition(
+            self,
+            user: str,
+            q: QuerySet[Model2],
+            k: str,
+            v: Any,
+            request: Request,
+        ) -> Any:
+            if k == "datetime_field__range":
+                assert isinstance(v, list)
+                assert all(isinstance(item, datetime) for item in cast(list[Any], v))
+            return await super().translate_condition(user, q, k, v, request)
 
         async def after_create(
             self,

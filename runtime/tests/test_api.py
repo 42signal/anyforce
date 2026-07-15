@@ -171,6 +171,37 @@ class TestAPI(Base):
             check_filtered,
         )
 
+    def test_list_with_datetime_range_filter(self, client: Any, endpoint: str):
+        required_char_field = "0123456789Tnot-a-date"
+        self.create(
+            client,
+            endpoint,
+            self.create_data(
+                datetime_field="2026-06-15T00:00:00.000Z",
+                required_char_field=required_char_field,
+            ),
+            status.HTTP_201_CREATED,
+        )
+
+        self.list(
+            client,
+            endpoint,
+            {
+                "condition": [
+                    orjson.dumps(
+                        {
+                            "datetime_field.range": [
+                                "2026-06-01T00:00:00.000Z",
+                                "2026-07-01T00:00:00.000Z",
+                            ],
+                            "required_char_field": required_char_field,
+                        }
+                    ).decode()
+                ]
+            },
+            status.HTTP_200_OK,
+        )
+
     def test_get(self, client: Any, endpoint: str):
         created = self.create(
             client, endpoint, self.create_data(), status.HTTP_201_CREATED
