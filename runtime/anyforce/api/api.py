@@ -382,7 +382,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 continue
 
             k = self.model.normalize_field(k)
-            v = await self.translate_condition(user, q, k, v, request)
+            v = await self.translate_condition(
+                user, q, k, self.parse_condition_value(v), request
+            )
             if isinstance(v, QuerySet):
                 q = cast(QuerySet[Model], v)
             elif isinstance(v, Q):
@@ -392,7 +394,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 and not (isinstance(v, list) and not v)
                 and not (isinstance(v, dict) and not v)
             ):
-                q_kwargs[k] = self.parse_condition_value(v)
+                q_kwargs[k] = v
         kv_q = Q(
             *qs,
             **q_kwargs,
@@ -412,7 +414,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 v[i] = cls.parse_condition_value(e)
         elif isinstance(v, str) and v.find("T") == 10:
             try:
-                return cls.parse_condition_value(v)
+                return parse_datetime(v)
             except ValueError:
                 pass
         return v
