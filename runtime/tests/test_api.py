@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Any
 
 import orjson
@@ -167,6 +168,42 @@ class TestAPI(Base):
             client,
             endpoint,
             {"condition": [orjson.dumps({"char_enum_field.in": ["b"]}).decode()]},
+            status.HTTP_200_OK,
+            check_filtered,
+        )
+
+    def test_list_with_iso_datetime_filter(self, client: Any, endpoint: str):
+        self.create(
+            client,
+            endpoint,
+            self.create_data(datetime_field=datetime(2026, 6, 1, tzinfo=timezone.utc)),
+            status.HTTP_201_CREATED,
+        )
+
+        def check_filtered(_params: dict[str, Any], response: Any) -> None:
+            assert all(
+                item["datetime_field"] == "2026-06-01T00:00:00Z"
+                for item in response["data"]
+            )
+
+        self.list(
+            client,
+            endpoint,
+            {
+                "condition": [
+                    orjson.dumps(
+                        {
+                            "datetime_field.range": [
+                                "2026-06-01T00:00:00.000Z",
+                                "2026-06-01T00:00:00.000Z",
+                            ],
+                            ".or": [
+                                {"datetime_field.in": ["2026-06-01T00:00:00.000Z"]}
+                            ],
+                        }
+                    ).decode()
+                ]
+            },
             status.HTTP_200_OK,
             check_filtered,
         )

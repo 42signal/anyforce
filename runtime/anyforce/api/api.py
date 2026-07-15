@@ -14,8 +14,6 @@ from typing import (
     cast,
 )
 
-import orjson
-from dateutil.parser import parse as parse_datetime
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -36,6 +34,7 @@ from tortoise.fields.base import Field
 from tortoise.models import MetaInfo
 from tortoise.queryset import CountQuery, QuerySet
 
+from .. import json
 from ..model import BaseModel
 from ..model.functions import in_transaction
 from ..model.queryset import ValuesWithoutGroupByQuery
@@ -558,7 +557,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 # https://tortoise-orm.readthedocs.io/en/latest/query.html
                 if condition:
                     for raw in condition:
-                        kv = orjson.loads(raw)
+                        kv = json.loads(raw)
                         q, iq = await self.translate_kv_condition(
                             current_user, request, q, kv
                         )
@@ -685,7 +684,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             if updated_at:
                                 # 防止老数据修改
                                 if isinstance(updated_at, str):
-                                    updated_at = parse_datetime(updated_at)
+                                    updated_at = json.parse_iso_datetime(updated_at)
                                 if isinstance(updated_at, datetime):
                                     obj_updated_at: datetime | None = getattr(
                                         obj, "updated_at", None
