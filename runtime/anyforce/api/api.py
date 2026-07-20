@@ -426,6 +426,9 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
             UpdateForm = self.update_form
         ListPydanticModel = self.model.list()
         DetailPydanticModel = self.model.detail()
+        table_description = getattr(
+            getattr(self.model, "_meta", None), "table_description", ""
+        )
 
         DetailPydanticModels = list[DetailPydanticModel] | DetailPydanticModel
         Response = create_model(
@@ -446,6 +449,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 status_code=status.HTTP_201_CREATED,
                 response_model_exclude_unset=True,
                 response_model_exclude_none=True,
+                description=f"创建 {table_description}",
             )
             async def create(
                 request: Request,
@@ -545,6 +549,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 response_model=Response,
                 response_model_exclude_unset=True,
                 response_model_exclude_none=True,
+                description=f"查询 {table_description} 列表",
             )
             async def index(
                 request: Request,
@@ -640,6 +645,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 response_model=DetailPydanticModel,
                 response_model_exclude_unset=True,
                 response_model_exclude_none=True,
+                description=f"查询指定 ID {table_description} 详情",
             )
             async def get(
                 request: Request,
@@ -677,6 +683,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 response_model=DetailPydanticModels,
                 response_model_exclude_unset=True,
                 response_model_exclude_none=True,
+                description=f"修改 / 更新特定 ID 的 {table_description}",
             )
             async def update(
                 request: Request,
@@ -760,6 +767,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 response_model=list[DeleteResponse] | DeleteResponse,
                 response_model_exclude_unset=True,
                 response_model_exclude_none=True,
+                description=f"删除特定 ID 的 {table_description}",
             )
             async def delete(
                 request: Request,
