@@ -230,8 +230,8 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         obj: Model,
         input: Any,
         request: Request,
-    ) -> Model:
-        return obj
+    ) -> tuple[Model, Iterable[str] | None]:
+        return obj, None
 
     async def after_create(
         self,
@@ -468,7 +468,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                     for input in inputs:
                         input = await self.before_create(current_user, input, request)
                         raw, computed, m2ms = self.model.process(input)
-                        obj = await self.before_save(
+                        obj, _ = await self.before_save(
                             current_user, self.model(**raw), input, request
                         )
                         await obj.save()
@@ -730,10 +730,17 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                             update_fields = raw.keys()
                             if update_fields:
                                 await obj.update(raw)
-                                obj = await self.before_save(
+                                obj, addtional_update_fields = await self.before_save(
                                     current_user, obj, raw, request
                                 )
-                                await obj.save(update_fields=update_fields)
+                                await obj.save(
+                                    update_fields={
+                                        *update_fields,
+                                        *addtional_update_fields,
+                                    }
+                                    if addtional_update_fields
+                                    else update_fields
+                                )
 
                             if prefetch:
                                 await self.fetch_related(
