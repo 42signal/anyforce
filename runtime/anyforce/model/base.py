@@ -103,6 +103,17 @@ class BaseModel(Model):
         )
 
     @classmethod
+    async def get_or_create(
+        cls,
+        defaults: Dict[str, Any] | None = None,
+        using_db: BaseDBAsyncClient | None = None,
+        **kwargs: Any,
+    ):
+        return await super().get_or_create(  # pyright: ignore[reportUnknownMemberType]
+            defaults=defaults, using_db=using_db, **kwargs
+        )
+
+    @classmethod
     async def update_or_create(
         cls,
         defaults: Dict[str, Any] | None = None,
