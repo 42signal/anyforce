@@ -298,7 +298,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
         return Query(
             [],
             title="动态加载计算字段",
-            description="获取更多字段, 支持采用 `prefetch=id&prefetch=user.id` 形式传入多个",
+            description="获取更多字段, 支持采用 `prefetch=id&prefetch=user` 形式传入多个",
         )
 
     @classmethod
