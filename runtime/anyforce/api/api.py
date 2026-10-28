@@ -622,7 +622,7 @@ class API(Generic[UserModel, Model, CreateForm, UpdateForm]):
                 if group_by:
                     objs = await self.grouping_q(q, group_by)
                 else:
-                    objs = await q
+                    objs = await q.distinct()
 
                 if prefetch:
                     for obj in objs:
@@ -843,6 +843,9 @@ class DistinctCountQuery(CountQuery):
 
     def _make_query(self) -> None:
         super()._make_query()
+        if getattr(self.query, "_groupbys"):
+            # Keep Tortoise's window count over the grouped result.
+            return
         setattr(
             self.query,
             "_selects",
