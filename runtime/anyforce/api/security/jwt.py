@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from fastapi import Request
 from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError
 from jose import jwt as jwt_lib
 
 from ..exceptions import HTTPUnAuthorizedError
@@ -19,7 +20,10 @@ def gen(
         token = await oauth2_scheme(request)
         if not token:
             raise HTTPUnAuthorizedError
-        payload = jwt_lib.decode(token, secret, algorithms=[algorithm])
+        try:
+            payload = jwt_lib.decode(token, secret, algorithms=[algorithm])
+        except JWTError as error:
+            raise HTTPUnAuthorizedError from error
         user_id: str = payload.get("sub", "")
         if not user_id:
             raise HTTPUnAuthorizedError
